@@ -1,0 +1,189 @@
+SET SERVEROUTPUT ON;
+
+-- Switch to OLTP PDB
+ALTER SESSION SET CONTAINER = eshop_oltp;
+
+-- Check if user eshop_oltp_user exists
+DECLARE
+    user_exists NUMBER := 0;
+BEGIN
+    SELECT COUNT(*)
+    INTO user_exists
+    FROM dba_users
+    WHERE username = 'ESHOP_OLTP_USER';
+
+    IF user_exists = 0 THEN
+        -- Create OLTP schema
+        EXECUTE IMMEDIATE '
+            CREATE USER eshop_oltp_user IDENTIFIED BY oltp_password
+            -- DEFAULT TABLESPACE users
+            -- QUOTA UNLIMITED ON users
+            ACCOUNT UNLOCK
+        ';
+        DBMS_OUTPUT.PUT_LINE('oltp_create_schema: User eshop_oltp_user was successfully created.');
+    ELSE
+        DBMS_OUTPUT.PUT_LINE('oltp_create_schema: User eshop_oltp_user already exists.');
+    END IF;
+END;
+/
+
+
+DECLARE
+    was_role_created NUMBER := 0;
+BEGIN
+    -- Check if role exists
+    SELECT COUNT(*)
+    INTO was_role_created
+    FROM dba_roles
+    WHERE role = 'ESHOP_OLTP_SYS';
+
+    IF was_role_created = 0 THEN
+        -- Create role
+        EXECUTE IMMEDIATE 'CREATE ROLE ESHOP_OLTP_SYS';
+        DBMS_OUTPUT.PUT_LINE('oltp_create_schema: Role ESHOP_OLTP_SYS was successfully created.');
+    ELSE
+        DBMS_OUTPUT.PUT_LINE('oltp_create_schema: Role ESHOP_OLTP_SYS already exists.');
+    END IF;
+END;
+/
+
+-- Grant necessary privileges to the role
+BEGIN
+    EXECUTE IMMEDIATE 'GRANT CONNECT TO ESHOP_OLTP_SYS';
+    EXECUTE IMMEDIATE 'GRANT RESOURCE TO ESHOP_OLTP_SYS';
+    EXECUTE IMMEDIATE 'GRANT CREATE TABLE TO ESHOP_OLTP_SYS';
+    EXECUTE IMMEDIATE 'GRANT CREATE VIEW TO ESHOP_OLTP_SYS';
+    EXECUTE IMMEDIATE 'GRANT CREATE MATERIALIZED VIEW TO ESHOP_OLTP_SYS';
+    EXECUTE IMMEDIATE 'GRANT CREATE SYNONYM TO ESHOP_OLTP_SYS';
+    EXECUTE IMMEDIATE 'GRANT CREATE PROCEDURE TO ESHOP_OLTP_SYS';
+    EXECUTE IMMEDIATE 'GRANT CREATE SEQUENCE TO ESHOP_OLTP_SYS';
+    EXECUTE IMMEDIATE 'GRANT CREATE TRIGGER TO ESHOP_OLTP_SYS';
+    EXECUTE IMMEDIATE 'GRANT CREATE TYPE TO ESHOP_OLTP_SYS';
+    EXECUTE IMMEDIATE 'GRANT QUERY REWRITE TO ESHOP_OLTP_SYS';
+    EXECUTE IMMEDIATE 'GRANT SELECT_CATALOG_ROLE TO ESHOP_OLTP_SYS';
+    EXECUTE IMMEDIATE 'GRANT ALTER SESSION TO ESHOP_OLTP_SYS';
+    EXECUTE IMMEDIATE 'GRANT SELECT ANY DICTIONARY TO ESHOP_OLTP_SYS';
+    EXECUTE IMMEDIATE 'GRANT CREATE PUBLIC DATABASE LINK TO ESHOP_OLTP_SYS';
+    EXECUTE IMMEDIATE 'GRANT CREATE PUBLIC SYNONYM TO ESHOP_OLTP_SYS';
+END;
+/
+
+DECLARE
+    -- Variables to check existing privileges
+    has_eshop_oltp_sys_role NUMBER := 0;
+    has_dba_role NUMBER := 0;
+    has_resource_role NUMBER := 0;
+    has_connect_role NUMBER := 0;
+    has_create_session NUMBER := 0;
+    has_select_any_dictionary NUMBER := 0;
+    has_select_all_constraints NUMBER := 0;
+    has_select_user_constraints NUMBER := 0;
+BEGIN
+    -- Check for ESHOP_OLTP_SYS role
+    SELECT COUNT(*) INTO has_eshop_oltp_sys_role
+    FROM DBA_ROLE_PRIVS
+    WHERE GRANTEE = 'ESHOP_OLTP_USER' AND GRANTED_ROLE = 'ESHOP_OLTP_SYS';
+
+    -- Check for DBA role
+    SELECT COUNT(*) INTO has_dba_role
+    FROM DBA_ROLE_PRIVS
+    WHERE GRANTEE = 'ESHOP_OLTP_USER' AND GRANTED_ROLE = 'DBA';
+
+    -- Check for RESOURCE role
+    SELECT COUNT(*) INTO has_resource_role
+    FROM DBA_ROLE_PRIVS
+    WHERE GRANTEE = 'ESHOP_OLTP_USER' AND GRANTED_ROLE = 'RESOURCE';
+
+    -- Check for CONNECT role
+    SELECT COUNT(*) INTO has_connect_role
+    FROM DBA_ROLE_PRIVS
+    WHERE GRANTEE = 'ESHOP_OLTP_USER' AND GRANTED_ROLE = 'CONNECT';
+
+    -- Check for CREATE SESSION privilege
+    SELECT COUNT(*) INTO has_create_session
+    FROM DBA_SYS_PRIVS
+    WHERE GRANTEE = 'ESHOP_OLTP_USER' AND PRIVILEGE = 'CREATE SESSION';
+
+    -- Check for SELECT ANY DICTIONARY privilege
+    SELECT COUNT(*) INTO has_select_any_dictionary
+    FROM DBA_SYS_PRIVS
+    WHERE GRANTEE = 'ESHOP_OLTP_USER' AND PRIVILEGE = 'SELECT ANY DICTIONARY';
+
+    -- Check for SELECT privilege on SYS.ALL_CONSTRAINTS
+    SELECT COUNT(*) INTO has_select_all_constraints
+    FROM DBA_TAB_PRIVS
+    WHERE GRANTEE = 'ESHOP_OLTP_USER' AND TABLE_NAME = 'ALL_CONSTRAINTS' AND PRIVILEGE = 'SELECT';
+
+    -- Check for SELECT privilege on SYS.USER_CONSTRAINTS
+    SELECT COUNT(*) INTO has_select_user_constraints
+    FROM DBA_TAB_PRIVS
+    WHERE GRANTEE = 'ESHOP_OLTP_USER' AND TABLE_NAME = 'USER_CONSTRAINTS' AND PRIVILEGE = 'SELECT';
+
+    -- Conditionally grant ESHOP_OLTP_SYS role
+    IF has_eshop_oltp_sys_role = 0 THEN
+        EXECUTE IMMEDIATE 'GRANT ESHOP_OLTP_SYS TO ESHOP_OLTP_USER';
+    END IF;
+
+    -- Conditionally grant DBA role
+    IF has_dba_role = 0 THEN
+        EXECUTE IMMEDIATE 'GRANT DBA TO ESHOP_OLTP_USER';
+    END IF;
+
+    -- Conditionally grant RESOURCE role
+    IF has_resource_role = 0 THEN
+        EXECUTE IMMEDIATE 'GRANT RESOURCE TO ESHOP_OLTP_USER';
+    END IF;
+
+    -- Conditionally grant CONNECT role
+    IF has_connect_role = 0 THEN
+        EXECUTE IMMEDIATE 'GRANT CONNECT TO ESHOP_OLTP_USER';
+    END IF;
+
+    -- Conditionally grant CREATE SESSION privilege
+    IF has_create_session = 0 THEN
+        EXECUTE IMMEDIATE 'GRANT CREATE SESSION TO ESHOP_OLTP_USER';
+    END IF;
+
+    -- Conditionally grant SELECT ANY DICTIONARY privilege
+    IF has_select_any_dictionary = 0 THEN
+        EXECUTE IMMEDIATE 'GRANT SELECT ANY DICTIONARY TO ESHOP_OLTP_USER';
+    END IF;
+
+    -- Conditionally grant SELECT privilege on SYS.ALL_CONSTRAINTS
+    IF has_select_all_constraints = 0 THEN
+        EXECUTE IMMEDIATE 'GRANT SELECT ON SYS.ALL_CONSTRAINTS TO ESHOP_OLTP_USER';
+    END IF;
+
+    -- Conditionally grant SELECT privilege on SYS.USER_CONSTRAINTS
+    IF has_select_user_constraints = 0 THEN
+        EXECUTE IMMEDIATE 'GRANT SELECT ON SYS.USER_CONSTRAINTS TO ESHOP_OLTP_USER';
+    END IF;
+
+    EXECUTE IMMEDIATE 'GRANT UNLIMITED TABLESPACE to ESHOP_OLTP_USER';
+
+    -- Optional: Log or output the grant actions
+    DBMS_OUTPUT.PUT_LINE('oltp_create_schema: Necessary privileges were granted to eshop_oltp_user.');
+END;
+/
+
+-- Grant necessary privileges directly to the user (since roles are not recognized inside stored procedures)
+BEGIN
+    EXECUTE IMMEDIATE 'GRANT CONNECT TO ESHOP_OLTP_USER';
+    EXECUTE IMMEDIATE 'GRANT RESOURCE TO ESHOP_OLTP_USER';
+    EXECUTE IMMEDIATE 'GRANT CREATE TABLE TO ESHOP_OLTP_USER';
+    EXECUTE IMMEDIATE 'GRANT CREATE VIEW TO ESHOP_OLTP_USER';
+    EXECUTE IMMEDIATE 'GRANT CREATE MATERIALIZED VIEW TO ESHOP_OLTP_USER';
+    EXECUTE IMMEDIATE 'GRANT CREATE SYNONYM TO ESHOP_OLTP_USER';
+    EXECUTE IMMEDIATE 'GRANT CREATE PROCEDURE TO ESHOP_OLTP_USER';
+    EXECUTE IMMEDIATE 'GRANT CREATE SEQUENCE TO ESHOP_OLTP_USER';
+    EXECUTE IMMEDIATE 'GRANT CREATE TRIGGER TO ESHOP_OLTP_USER';
+    EXECUTE IMMEDIATE 'GRANT CREATE TYPE TO ESHOP_OLTP_USER';
+    EXECUTE IMMEDIATE 'GRANT QUERY REWRITE TO ESHOP_OLTP_USER';
+    EXECUTE IMMEDIATE 'GRANT SELECT_CATALOG_ROLE TO ESHOP_OLTP_USER';
+    EXECUTE IMMEDIATE 'GRANT ALTER SESSION TO ESHOP_OLTP_USER';
+    EXECUTE IMMEDIATE 'GRANT SELECT ANY DICTIONARY TO ESHOP_OLTP_USER';
+    EXECUTE IMMEDIATE 'GRANT CREATE PUBLIC DATABASE LINK TO ESHOP_OLTP_USER';
+    EXECUTE IMMEDIATE 'GRANT CREATE PUBLIC SYNONYM TO ESHOP_OLTP_USER';
+    EXECUTE IMMEDIATE 'GRANT UNLIMITED TABLESPACE TO ESHOP_OLTP_USER';
+END;
+/
