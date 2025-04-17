@@ -84,6 +84,7 @@ BEGIN
         phone_number VARCHAR2(25),
         password VARCHAR2(255) NOT NULL,
         salt VARCHAR2(255) NOT NULL,
+        region_id NUMBER DEFAULT NULL,
         created_on DATE DEFAULT SYSDATE NOT NULL,
         last_updated_on DATE DEFAULT NULL
     ', 'oltp_create_tables');
@@ -308,6 +309,7 @@ BEGIN
     TRY_CREATE_TABLE('SLS_ORDERS', ' 
         id NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
         customer_id NUMBER NOT NULL,
+        customer_region_id NUMBER NOT NULL,
         address NVARCHAR2(850) NOT NULL,
         status_id NUMBER NOT NULL,
         created_on DATE DEFAULT SYSDATE NOT NULL,

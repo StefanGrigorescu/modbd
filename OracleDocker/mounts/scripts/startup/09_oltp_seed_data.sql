@@ -163,7 +163,7 @@ EXCEPTION
 END;
 /
 
--- Create procedure to insert a user
+-- Create procedure to insert a user (staff, not customer)
 CREATE OR REPLACE PROCEDURE INSERT_USER (
     p_username IN NVARCHAR2,
     p_first_name IN NVARCHAR2,
@@ -445,13 +445,15 @@ CREATE OR REPLACE FUNCTION INSERT_USER_ADDRESS (
     p_street IN NVARCHAR2,
     p_str_number IN NUMBER,
     p_postal_code IN VARCHAR2,
-    p_other_details IN NVARCHAR2 DEFAULT NULL
+    p_other_details IN NVARCHAR2 DEFAULT NULL,
+    p_region_id OUT NUMBER
 ) RETURN NUMBER IS
     city_id NUMBER;
 BEGIN
     -- Check if the city exists in the specified region
     BEGIN
-        SELECT c.id INTO city_id
+        SELECT c.id, r.id 
+        INTO city_id, p_region_id
         FROM IDNT_CITIES c
         JOIN IDNT_REGIONS r ON c.region_id = r.id
         WHERE UPPER(c.name) = UPPER(p_city_name)
@@ -501,6 +503,7 @@ CREATE OR REPLACE PROCEDURE INSERT_CUSTOMER (
     user_exists NUMBER := 0;
     user_id NUMBER;
     address_created NUMBER;
+    customer_region_id NUMBER;
 BEGIN
     -- Check if the user already exists by username or email
     SELECT COUNT(*) INTO user_exists
@@ -525,10 +528,16 @@ BEGIN
             p_street => p_street,
             p_str_number => p_str_number,
             p_postal_code => p_postal_code,
-            p_other_details => p_other_details
+            p_other_details => p_other_details,
+            p_region_id => customer_region_id
         );
 
         IF address_created = 1 THEN
+            -- Update the user's region_id
+            UPDATE IDNT_USERS
+            SET region_id = customer_region_id
+            WHERE id = user_id;
+
             LOG_INFORMATION('INSERT_CUSTOMER: Address created for user ID ' || user_id || '.');
             COMMIT;
         ELSE
