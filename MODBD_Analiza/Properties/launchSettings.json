@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "MODBD_Analiza": {
+      "commandName": "Project"
+    },
+    "Container (Dockerfile)": {
+      "commandName": "Docker"
+    }
+  }
+}
