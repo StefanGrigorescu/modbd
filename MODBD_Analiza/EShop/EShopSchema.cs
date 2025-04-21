@@ -19,18 +19,18 @@ internal sealed record IdntUsers : Table<IdntUsers>
     public required override string Name { get; init; } = "IDNT_USERS";
     public required override IReadOnlyList<Column> AllColumns { get; init; }
 
-    public required Column Id = new() { Name = "id", };
-    public required Column Username = new() { Name = "username", };
-    public required Column FirstName = new() { Name = "first_name", };
-    public required Column LastName = new() { Name = "last_name", };
-    public required Column DateOfBirth = new() { Name = "date_of_birth", };
-    public required Column Email = new() { Name = "email", };
-    public required Column PhoneNumber = new() { Name = "phone_number", };
-    public required Column Password = new() { Name = "password", };
-    public required Column Salt = new() { Name = "salt", };
-    public required Column RegionId = new() { Name = "region_id", };
-    public required Column CreatedOn = new() { Name = "created_on", };
-    public required Column LastUpdatedOn = new() { Name = "last_updated_on", };
+    public required Column Id { get; init; } = new() { Name = "id" };
+    public required Column Username { get; init; } = new() { Name = "username" };
+    public required Column FirstName { get; init; } = new() { Name = "first_name" };
+    public required Column LastName { get; init; } = new() { Name = "last_name" };
+    public required Column DateOfBirth { get; init; } = new() { Name = "date_of_birth"   };
+    public required Column Email { get; init; } = new() { Name = "email" };
+    public required Column PhoneNumber { get; init; } = new() { Name = "phone_number" };
+    public required Column Password { get; init; } = new() { Name = "password" };
+    public required Column Salt { get; init; } = new() { Name = "salt"   };
+    public required Column RegionId { get; init; } = new() { Name = "region_id", };
+    public required Column CreatedOn { get; init; } = new() { Name = "created_on", };
+    public required Column LastUpdatedOn { get; init; } = new() { Name = "last_updated_on", };
 
     public override AliasedTable<IdntUsers> As(string alias) =>
         AliasedTable<IdntUsers>.New(this, alias);
@@ -50,13 +50,13 @@ internal sealed record SlsOrders : Table<SlsOrders>
     public required override string Name { get; init; } = "SLS_ORDERS";
     public required override IReadOnlyList<Column> AllColumns { get; init; }
 
-    public required Column Id = new() { Name = "id", };
+    public required Column Id { get; init; } = new() { Name = "id", };
     public required Column CustomerId { get; init; } = new() { Name = "customer_id", };
     public required Column CustomerRegionId { get; init; } = new() { Name = "customer_region_id", };
-    public required Column Address = new() { Name = "address", };
+    public required Column Address { get; init; } = new() { Name = "address", };
     public required Column StatusId { get; init; } = new() { Name = "status_id", };
-    public required Column CreatedOn = new() { Name = "created_on", };
-    public required Column LastUpdatedOn = new() { Name = "last_updated_on", };
+    public required Column CreatedOn { get; init; } = new() { Name = "created_on", };
+    public required Column LastUpdatedOn { get; init; } = new() { Name = "last_updated_on", };
 
     public override AliasedTable<SlsOrders> As(string alias) =>
         AliasedTable<SlsOrders>.New(this, alias);
@@ -76,11 +76,11 @@ internal sealed record SlsOrderItems : Table<SlsOrderItems>
     public required override string Name { get; init; } = "SLS_ORDER_ITEMS";
     public required override IReadOnlyList<Column> AllColumns { get; init; }
 
-    public required Column OrderId = new() { Name = "order_id", };
+    public required Column OrderId { get; init; } = new() { Name = "order_id", };
     public required Column ProductId { get; init; } = new() { Name = "product_id", };
-    public required Column Quantity = new() { Name = "quantity", };
-    public required Column CreatedOn = new() { Name = "created_on", };
-    public required Column LastUpdatedOn = new() { Name = "last_updated_on", };
+    public required Column Quantity { get; init; } = new() { Name = "quantity", };
+    public required Column CreatedOn { get; init; } = new() { Name = "created_on", };
+    public required Column LastUpdatedOn { get; init; } = new() { Name = "last_updated_on", };
 
     public override AliasedTable<SlsOrderItems> As(string alias) =>
         AliasedTable<SlsOrderItems>.New(this, alias);
