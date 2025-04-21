@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics.CodeAnalysis;
+using MODBD_Analiza.Schema;
 
-namespace MODBD_Analiza;
+namespace MODBD_Analiza.EShop;
 
 internal sealed record EShopSchema
 {
@@ -13,7 +14,7 @@ internal sealed record EShopSchema
 }
 
 
-internal sealed record IdntUsers : Table
+internal sealed record IdntUsers : Table<IdntUsers>
 {
     public required override string Name { get; init; } = "IDNT_USERS";
     public required override IReadOnlyList<Column> AllColumns { get; init; }
@@ -31,15 +32,20 @@ internal sealed record IdntUsers : Table
     public required Column CreatedOn = new() { Name = "created_on", };
     public required Column LastUpdatedOn = new() { Name = "last_updated_on", };
 
+    public override AliasedTable<IdntUsers> As(string alias) =>
+        AliasedTable<IdntUsers>.New(this, alias);
+
     public static IdntUsers New() => new();
-    [SetsRequiredMembers] private IdntUsers()
+    public override IdntUsers Copy() => New();
+    [SetsRequiredMembers]
+    private IdntUsers()
     {
         AllColumns = GetAllColumns();
     }
 }
 
 
-internal sealed record SlsOrders : Table
+internal sealed record SlsOrders : Table<SlsOrders>
 {
     public required override string Name { get; init; } = "SLS_ORDERS";
     public required override IReadOnlyList<Column> AllColumns { get; init; }
@@ -52,15 +58,20 @@ internal sealed record SlsOrders : Table
     public required Column CreatedOn = new() { Name = "created_on", };
     public required Column LastUpdatedOn = new() { Name = "last_updated_on", };
 
+    public override AliasedTable<SlsOrders> As(string alias) =>
+        AliasedTable<SlsOrders>.New(this, alias);
+
     public static SlsOrders New() => new();
-    [SetsRequiredMembers] private SlsOrders()
+    public override SlsOrders Copy() => New();
+    [SetsRequiredMembers]
+    private SlsOrders()
     {
         AllColumns = GetAllColumns();
     }
 }
 
 
-internal sealed record SlsOrderItems : Table
+internal sealed record SlsOrderItems : Table<SlsOrderItems>
 {
     public required override string Name { get; init; } = "SLS_ORDER_ITEMS";
     public required override IReadOnlyList<Column> AllColumns { get; init; }
@@ -71,34 +82,14 @@ internal sealed record SlsOrderItems : Table
     public required Column CreatedOn = new() { Name = "created_on", };
     public required Column LastUpdatedOn = new() { Name = "last_updated_on", };
 
+    public override AliasedTable<SlsOrderItems> As(string alias) =>
+        AliasedTable<SlsOrderItems>.New(this, alias);
+
     public static SlsOrderItems New() => new();
-    [SetsRequiredMembers] private SlsOrderItems() 
+    public override SlsOrderItems Copy() => New();
+    [SetsRequiredMembers]
+    private SlsOrderItems()
     {
         AllColumns = GetAllColumns();
     }
-}
-
-
-internal abstract record Table
-{
-    public abstract string Name { get; init; }
-    public abstract IReadOnlyList<Column> AllColumns { get; init; }
-
-    public IReadOnlyList<Column> GetAllColumns() =>
-        GetType()
-            .GetProperties()
-            .Where(p => p.PropertyType == typeof(Column))
-            .Select(p => (p.GetValue(this) as Column)!)
-            .ToArray()
-            .AsReadOnly();
-}
-
-internal sealed record Column
-{
-    public required string Name { get; init; }
-    //public required string Type { get; init; }
-    //public required bool IsPrimaryKey { get; init; }
-    //public required bool IsForeignKey { get; init }
-    //public required string ForeignKeyTable { get; init; }
-    //public required string ForeignKeyColumn { get; init; }
 }
