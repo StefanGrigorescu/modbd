@@ -8,6 +8,7 @@ internal interface IApplication
 {
     string Sql { get; }
     IReadOnlyList<Column> AllColumns { get; }
+    IReadOnlyList<ICondition> WhereConditions { get; }
 }
 
 
@@ -17,6 +18,7 @@ internal sealed record Application<TTable> : IApplication
     public required Func<TTable, IReadOnlyList<Column>> Select { get; init; }
     public required TTable Table { get; init; }
     public required Func<TTable, IReadOnlyList<ConditionWithValue>> Where { get; init; }
+    public required IReadOnlyList<ICondition> WhereConditions { get; init; }
     public required IReadOnlyList<Column> SelectColumns { get; init; }
     public required IReadOnlyList<Column> WhereColumns { get; init; }
     public required IReadOnlyList<Column> AllColumns { get; init; }
@@ -36,12 +38,12 @@ internal sealed record Application<TTable> : IApplication
         Table = table;
         Where = where;
 
-        IReadOnlyList<ConditionWithValue> whereConditions = Where(table);
+        WhereConditions = Where(table);
 
         SelectColumns = Select(table)
             .Distinct();
-        WhereColumns = whereConditions
-            .Select(cond => cond.Column)
+        WhereColumns = WhereConditions
+            .SelectMany(cond => cond.Columns)
             .Distinct();
         AllColumns = SelectColumns
             .Concat(WhereColumns)
@@ -50,7 +52,7 @@ internal sealed record Application<TTable> : IApplication
         Sql = new SqlQueryBuilder()
             .Select(SelectColumns)
             .From(table)
-            .Where(whereConditions)
+            .Where(WhereConditions)
             .ToSql();
     }
 }
@@ -65,6 +67,7 @@ internal sealed record Application<TTable1, TTable2> : IApplication
     public required AliasedTable<TTable2> Table2 { get; init; }
     public required Func<TTable1, TTable2, IReadOnlyList<ConditionWithOtherColumn>> On { get; init; }
     public required Func<TTable1, TTable2, IReadOnlyList<ICondition>> Where { get; init; }
+    public required IReadOnlyList<ICondition> WhereConditions { get; init; }
     public required IReadOnlyList<Column> SelectColumns { get; init; }
     public required IReadOnlyList<Column> WhereColumns { get; init; }
     public required IReadOnlyList<Column> OnColumns { get; init; }
@@ -95,14 +98,14 @@ internal sealed record Application<TTable1, TTable2> : IApplication
         Where = where;
 
         IReadOnlyList<ConditionWithOtherColumn> onConditions = On(table1, table2);
-        IReadOnlyList<ICondition> whereConditions = Where(table1, table2);
+        WhereConditions = Where(table1, table2);
 
         SelectColumns = Select(table1, table2)
             .Distinct();
         OnColumns = onConditions
             .SelectMany(cond => cond.Columns)
             .Distinct();
-        WhereColumns = whereConditions
+        WhereColumns = WhereConditions
             .SelectMany(cond => cond.Columns)
             .Distinct();
         AllColumns = SelectColumns
@@ -115,7 +118,7 @@ internal sealed record Application<TTable1, TTable2> : IApplication
             .From(table1)
             .InnerJoin(table2)
             .On(onConditions)
-            .Where(whereConditions)
+            .Where(WhereConditions)
             .ToSql();
     }
 }
