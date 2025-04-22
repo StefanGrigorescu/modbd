@@ -1,7 +1,7 @@
 services:
   oracle-db:
     image: container-registry.oracle.com/database/enterprise:21.3.0.0
-    container_name: oraDW
+    container_name: EShopOra
     ports:
       - "1515:1521" # Oracle Listener
       - "1516:5500" # OEM Express
@@ -24,3 +24,23 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
+    networks:
+      - modbd_network
+
+  modbd-api:
+    build:
+      context: .
+      dockerfile: ./MODBD_Api/Dockerfile
+    container_name: EShopApi
+    ports:
+      - "8080:8080" # Expose the API on port 8080
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+    depends_on:
+      - oracle-db
+    networks:
+      - modbd_network
+
+networks:
+  modbd_network:
+    driver: bridge
