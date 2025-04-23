@@ -1,0 +1,7 @@
+﻿namespace MODBD_Common.Abstractions.Events;
+
+public abstract class AppEvent<TId>
+    where TId : AppEventId
+{
+    public required TId CreatedOn { get; init; }
+}

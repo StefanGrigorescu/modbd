@@ -1,4 +1,4 @@
-using MODBD_Api.Common;
+using MODBD_Api.Common.DI;
 using MODBD_Api.Common.Web;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);

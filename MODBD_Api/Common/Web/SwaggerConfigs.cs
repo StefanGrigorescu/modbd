@@ -1,5 +1,5 @@
 ﻿using Microsoft.OpenApi.Models;
-using MODBD_Api.Common.Text;
+using MODBD_Common.Text;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace MODBD_Api.Common.Web;

@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using MODBD_Api.Common.Abstractions.Responses;
-using MODBD_Api.Common.Collections;
+using MODBD_Common.Abstractions.Responses;
+using MODBD_Common.Collections;
 
 namespace MODBD_Api.Common.Contracts;
 

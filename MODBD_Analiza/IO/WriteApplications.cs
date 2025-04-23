@@ -1,5 +1,5 @@
-﻿using MODBD_Analiza.Applications;
-using MODBD_Analiza.Schema;
+﻿using MODBD_Core.Applications;
+using MODBD_Core.Schema;
 
 namespace MODBD_Analiza.IO;
 

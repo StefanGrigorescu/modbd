@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
@@ -24,6 +24,11 @@
     <Folder Include="Purchases\AppQueries\" />
     <Folder Include="Sales\AppCommands\" />
     <Folder Include="Sales\AppQueries\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MODBD_Common\MODBD_Common.csproj" />
+    <ProjectReference Include="..\MODBD_Core\MODBD_Core.csproj" />
   </ItemGroup>
 
 </Project>

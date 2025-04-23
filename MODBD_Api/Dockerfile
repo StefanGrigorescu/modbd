@@ -1,30 +1,33 @@
-# See https://aka.ms/customizecontainer to learn how to customize your debug container and how Visual Studio uses this Dockerfile to build your images for faster debugging.
-
-# This stage is used when running from VS in fast mode (Default for Debug configuration)
+# Use the ASP.NET runtime image for the base stage
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
-USER app
 WORKDIR /app
 EXPOSE 8080
 EXPOSE 8081
 
-
-# This stage is used to build the service project
+# Use the .NET SDK image for the build stage
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["MODBD_Api/MODBD_Api.csproj", "./"]
-RUN dotnet restore "./MODBD_Api.csproj"
-# Copy the entire MODBD_Api folder
-COPY MODBD_Api/. . 
-WORKDIR "/src/."
+
+# Copy the solution file and restore dependencies
+COPY ["MODBD_Api.sln", "./"]
+COPY ["MODBD_Common/MODBD_Common.csproj", "MODBD_Common/"]
+COPY ["MODBD_Core/MODBD_Core.csproj", "MODBD_Core/"]
+COPY ["MODBD_Api/MODBD_Api.csproj", "MODBD_Api/"]
+COPY ["MODBD_Analiza/MODBD_Analiza.csproj", "MODBD_Analiza/"]
+RUN dotnet restore "./MODBD_Api.sln"
+
+# Copy all project files and build the solution
+COPY . .
+WORKDIR "/src/MODBD_Api"
 RUN dotnet build "./MODBD_Api.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
-# This stage is used to publish the service project to be copied to the final stage
+# Publish the application
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
 RUN dotnet publish "./MODBD_Api.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
-# This stage is used in production or when running from VS in regular mode (Default when not using the Debug configuration)
+# Use the runtime image for the final stage
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .

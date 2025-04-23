@@ -1,5 +1,5 @@
-﻿using MODBD_Api.Common.Abstractions.DiscriminatedUnions;
-using MODBD_Api.Common.Text;
+﻿using MODBD_Common.Abstractions.DiscriminatedUnions;
+using MODBD_Common.Text;
 using System.Diagnostics.CodeAnalysis;
 
 namespace MODBD_Api.Identity;

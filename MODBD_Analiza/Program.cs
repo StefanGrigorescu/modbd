@@ -1,5 +1,5 @@
-﻿using MODBD_Analiza.EShop;
-using MODBD_Analiza.IO;
+﻿using MODBD_Analiza.IO;
+using MODBD_Core.EShop;
 
 Output output = new();
 

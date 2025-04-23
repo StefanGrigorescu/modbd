@@ -1,7 +1,7 @@
 ﻿using Dapper;
 using Microsoft.AspNetCore.Mvc;
-using MODBD_Api.Common.Abstractions;
-using MODBD_Api.Common.Abstractions.Responses;
+using MODBD_Common.Abstractions;
+using MODBD_Common.Abstractions.Responses;
 using MODBD_Api.Common.Contracts;
 using MODBD_Api.Common.Persistence;
 using System.Data;

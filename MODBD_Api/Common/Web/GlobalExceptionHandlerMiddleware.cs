@@ -1,5 +1,5 @@
-﻿using MODBD_Api.Common.Abstractions.DomainExceptions;
-using MODBD_Api.Common.Collections;
+﻿using MODBD_Common.Abstractions.DomainExceptions;
+using MODBD_Common.Collections;
 using MODBD_Api.Common.Contracts;
 using MODBD_Api.Identity;
 using System.Net;
