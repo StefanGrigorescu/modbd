@@ -1,4 +1,5 @@
-﻿using MODBD_Api.Common.Persistence;
+﻿using MODBD_Api.Common.Abstractions;
+using MODBD_Api.Common.Persistence;
 using MODBD_Api.Common.Web;
 
 namespace MODBD_Api.Common;
@@ -15,6 +16,7 @@ public static class ModbdDI
     private static IServiceCollection AddApiCommonModuleServices(this IServiceCollection services, IConfiguration configuration, IWebHostEnvironment environment)
     {
         services.AddDatabaseServices(configuration, environment);
+        services.AddCQRS(typeof(Program).Assembly);
         services.AddWebServices(configuration);
 
         return services;

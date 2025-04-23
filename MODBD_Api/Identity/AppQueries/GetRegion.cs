@@ -1,5 +1,6 @@
 ﻿using Dapper;
 using Microsoft.AspNetCore.Mvc;
+using MODBD_Api.Common.Abstractions;
 using MODBD_Api.Common.Abstractions.Responses;
 using MODBD_Api.Common.Contracts;
 using MODBD_Api.Common.Persistence;
@@ -30,13 +31,13 @@ public sealed class GetRegionController : ControllerBase
 
 public sealed record GetRegionResponse
 {
-    public required int Id { get; init; }
     public required string Name { get; init; }
+    public required DateTime CreatedOn { get; init; }
     public required DateTime LastUpdatedOn { get; init; }
 }
 
 
-public sealed record GetRegionQuery
+public sealed record GetRegionQuery : IRequest<GetRegionResponse>
 {
     public required int Id { get; init; }
 
@@ -48,7 +49,7 @@ public sealed record GetRegionQuery
 }
 
 
-public sealed class GetRegionQueryHandler
+public sealed class GetRegionQueryHandler : IRequestHandler<GetRegionQuery, GetRegionResponse>
 {
     private readonly GetDbConnection _getDbConnection;
 
@@ -62,7 +63,7 @@ public sealed class GetRegionQueryHandler
         using (IDbConnection dbConnection = _getDbConnection())
         {
             string sql = @"
-                    SELECT id, name, last_updated_on 
+                    SELECT name, created_on, last_updated_on 
                     FROM IDNT_REGIONS 
                     WHERE id = :id";
 

@@ -38,7 +38,7 @@ public sealed class GlobalExceptionHandlerMiddleware : IMiddleware
             await HandleUnauthorizedResourceAccessException(context, ex);
         }
         catch (Exception ex)
-        {
+        {            
             await HandleException(context, ex);
         }
     }
