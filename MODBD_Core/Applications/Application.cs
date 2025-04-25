@@ -1,5 +1,6 @@
-﻿using MODBD_Core.Schema;
-using MODBD_Common.Collections;
+﻿using MODBD_Common.Collections;
+using MODBD_Common.NumericTypes.Positive;
+using MODBD_Core.Schema;
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
 
@@ -7,34 +8,50 @@ namespace MODBD_Core.Applications;
 
 public interface IApplication
 {
+    Positive<double> FrequencyPerMonth { get; }
     string Sql { get; }
     IReadOnlyList<Column> AllColumns { get; }
-    IReadOnlyList<ICondition> WhereConditions { get; }
+    Conditions WhereConditions { get; }
 }
 
 
 public sealed record Application<TTable> : IApplication
     where TTable : Table<TTable>
 {
+    public required Positive<double> FrequencyPerMonth { get; init; }
+    public required Positive<int> Selectivity { get; init; }
     public required Func<TTable, IReadOnlyList<Column>> Select { get; init; }
     public required TTable Table { get; init; }
-    public required Func<TTable, IReadOnlyList<ConditionWithValue>> Where { get; init; }
-    public required IReadOnlyList<ICondition> WhereConditions { get; init; }
+    public required Func<TTable, Conditions> Where { get; init; }
+    public required Conditions WhereConditions { get; init; }
     public required IReadOnlyList<Column> SelectColumns { get; init; }
     public required IReadOnlyList<Column> WhereColumns { get; init; }
     public required IReadOnlyList<Column> AllColumns { get; init; }
     public required string Sql { get; init; }
 
-    public static Application<TTable> New(Func<TTable, IReadOnlyList<Column>> select, TTable table, Func<TTable, IReadOnlyList<ConditionWithValue>> where) =>
+    public Application<TTable> WithFrequencyPerMonth(double frequencyPerMonth) =>
+        WithFrequencyPerMonth(Positive<double>.From(frequencyPerMonth));
+
+    public Application<TTable> WithFrequencyPerMonth(Positive<double> frequencyPerMonth) =>
+        this with { FrequencyPerMonth = frequencyPerMonth, };
+
+    public Application<TTable> WithSelectivity(int selectivity) =>
+        WithFrequencyPerMonth(Positive<double>.From(selectivity));
+
+    public Application<TTable> WithSelectivity(Positive<int> selectivity) =>
+        this with { Selectivity = selectivity, };
+
+    public static Application<TTable> New(Func<TTable, IReadOnlyList<Column>> select, TTable table, Func<TTable, Conditions> where) =>
         new(select, table, where);
 
     [SetsRequiredMembers]
     private Application(
         Func<TTable, IReadOnlyList<Column>> select,
         TTable table,
-        Func<TTable, IReadOnlyList<ConditionWithValue>> where
-    )
-    {
+        Func<TTable, Conditions> where
+    ) {
+        FrequencyPerMonth = Positive<double>.Zero;
+        Selectivity = Positive<int>.Zero;
         Select = select;
         Table = table;
         Where = where;
@@ -44,9 +61,7 @@ public sealed record Application<TTable> : IApplication
         SelectColumns = Select(table)
             .Distinct()
             .ToIReadOnlyList();
-        WhereColumns = WhereConditions
-            .SelectMany(cond => cond.Columns)
-            .ToIReadOnlyList();
+        WhereColumns = WhereConditions.DistinctColumns();
         AllColumns = SelectColumns
             .Concat(WhereColumns)
             .ToIReadOnlyList();
@@ -64,12 +79,13 @@ public sealed record Application<TTable1, TTable2> : IApplication
     where TTable1 : Table<TTable1>
     where TTable2 : Table<TTable2>
 {
+    public required Positive<double> FrequencyPerMonth { get; init; }
     public required Func<TTable1, TTable2, IReadOnlyList<Column>> Select { get; init; }
     public required AliasedTable<TTable1> Table1 { get; init; }
     public required AliasedTable<TTable2> Table2 { get; init; }
-    public required Func<TTable1, TTable2, IReadOnlyList<ConditionWithOtherColumn>> On { get; init; }
-    public required Func<TTable1, TTable2, IReadOnlyList<ICondition>> Where { get; init; }
-    public required IReadOnlyList<ICondition> WhereConditions { get; init; }
+    public required Func<TTable1, TTable2, Conditions> On { get; init; }
+    public required Func<TTable1, TTable2, Conditions> Where { get; init; }
+    public required Conditions WhereConditions { get; init; }
     public required IReadOnlyList<Column> SelectColumns { get; init; }
     public required IReadOnlyList<Column> WhereColumns { get; init; }
     public required IReadOnlyList<Column> OnColumns { get; init; }
@@ -80,8 +96,8 @@ public sealed record Application<TTable1, TTable2> : IApplication
         Func<TTable1, TTable2, IReadOnlyList<Column>> select,
         AliasedTable<TTable1> table1,
         AliasedTable<TTable2> table2,
-        Func<TTable1, TTable2, IReadOnlyList<ConditionWithOtherColumn>> on,
-        Func<TTable1, TTable2, IReadOnlyList<ICondition>> where
+        Func<TTable1, TTable2, Conditions> on,
+        Func<TTable1, TTable2, Conditions> where
     ) => new(select, table1, table2, on, where);
 
     [SetsRequiredMembers]
@@ -89,27 +105,23 @@ public sealed record Application<TTable1, TTable2> : IApplication
         Func<TTable1, TTable2, IReadOnlyList<Column>> select,
         AliasedTable<TTable1> table1,
         AliasedTable<TTable2> table2,
-        Func<TTable1, TTable2, IReadOnlyList<ConditionWithOtherColumn>> on,
-        Func<TTable1, TTable2, IReadOnlyList<ICondition>> where
-    )
-    {
+        Func<TTable1, TTable2, Conditions> on,
+        Func<TTable1, TTable2, Conditions> where
+    ) {
+        FrequencyPerMonth = Positive<double>.Zero;
         Select = select;
         Table1 = table1;
         Table2 = table2;
         On = on;
         Where = where;
 
-        IReadOnlyList<ConditionWithOtherColumn> onConditions = On(table1, table2);
+        Conditions onConditions = On(table1, table2);
         WhereConditions = Where(table1, table2);
 
         SelectColumns = Select(table1, table2)
             .ToIReadOnlyList();
-        OnColumns = onConditions
-            .SelectMany(cond => cond.Columns)
-            .ToIReadOnlyList();
-        WhereColumns = WhereConditions
-            .SelectMany(cond => cond.Columns)
-            .ToIReadOnlyList();
+        OnColumns = onConditions.DistinctColumns();
+        WhereColumns = WhereConditions.DistinctColumns();
         AllColumns = SelectColumns
             .Concat(OnColumns)
             .Concat(WhereColumns)
@@ -148,15 +160,15 @@ public class SqlQueryBuilder
         return this;
     }
 
-    public SqlQueryBuilder On(IReadOnlyList<ConditionWithOtherColumn> onConditions)
+    public SqlQueryBuilder On(Conditions onConditions)
     {
-        _stringBuilder.AppendLine($"\tON {string.Join("\n\tAND ", onConditions.Select(c => c.Sql))} ");
+        _stringBuilder.AppendLine($"\tON {string.Join("\n\tAND ", onConditions.Select(c => c.Value.Sql))} ");
         return this;
     }
 
-    public SqlQueryBuilder Where(IReadOnlyList<ICondition> whereConditions)
+    public SqlQueryBuilder Where(Conditions whereConditions)
     {
-        _stringBuilder.AppendLine($"WHERE {string.Join("\n\tAND ", whereConditions.Select(c => c.Sql))}");
+        _stringBuilder.AppendLine($"WHERE {string.Join("\n\tAND ", whereConditions.Select(c => c.Value.Sql))}");
         return this;
     }
 

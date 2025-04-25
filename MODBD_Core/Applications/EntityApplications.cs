@@ -22,7 +22,9 @@ public static class EntityApplicationsFactories
         .ToIReadOnlyList(p => (IApplication)p.GetValue(apps)!);
 
     public static IReadOnlyList<ICondition> GetAllSimplePredicates(this IReadOnlyList<IApplication> allApplications) => allApplications
-                .SelectMany(app => app.WhereConditions)
-                .Distinct()
-                .ToIReadOnlyList();
+        .SelectMany(app => app
+            .WhereConditions
+            .Select(kvp => kvp.Value)
+        ).Distinct()
+        .ToIReadOnlyList();
 }

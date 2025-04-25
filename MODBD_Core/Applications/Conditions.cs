@@ -1,4 +1,5 @@
-﻿using MODBD_Core.Schema;
+﻿using MODBD_Common.Collections;
+using MODBD_Core.Schema;
 using System.Diagnostics.CodeAnalysis;
 
 namespace MODBD_Core.Applications;
@@ -12,11 +13,21 @@ public sealed record ConditionWithValue : ICondition
     public required IReadOnlyList<Column> Columns { get; init; }
     public required string Sql { get; init; }
 
-    public static IReadOnlyList<ConditionWithValue> NewList(Column column, Operator @operator, object value) =>
-        [new ConditionWithValue(column, @operator, value)];
+    public static Conditions NewList(Column column, Operator @operator, object value) =>
+        new([new ConditionWithValue(column, @operator, value)]);
 
     public IReadOnlyList<ICondition> And(ICondition other) =>
         [this, other];
+
+    public bool Equals(ICondition? other) => 
+        other is not null &&
+        other is ConditionWithValue otherCondition &&
+        Column.Equals(otherCondition.Column) &&
+        Operator.Equals(otherCondition.Operator) &&
+        Value.Equals(otherCondition.Value);
+
+    public override int GetHashCode() =>
+        HashCode.Combine(Column, Operator, Value);
 
     [SetsRequiredMembers]
     private ConditionWithValue(
@@ -42,11 +53,21 @@ public sealed record ConditionWithOtherColumn : ICondition
     public required IReadOnlyList<Column> Columns { get; init; }
     public required string Sql { get; init; }
 
-    public static IReadOnlyList<ConditionWithOtherColumn> NewList(Column column1, Operator @operator, Column column2) =>
-        [new ConditionWithOtherColumn(column1, @operator, column2)];
+    public static Conditions NewList(Column column1, Operator @operator, Column column2) =>
+        new([new ConditionWithOtherColumn(column1, @operator, column2)]);
 
     public IReadOnlyList<ICondition> And(ICondition other) =>
         [this, other];
+
+    public bool Equals(ICondition? other) =>
+        other is not null &&
+        other is ConditionWithOtherColumn otherCondition &&
+        Column1.Equals(otherCondition.Column1) &&
+        Operator.Equals(otherCondition.Operator) &&
+        Column2.Equals(otherCondition.Column2);
+
+    public override int GetHashCode() =>
+        HashCode.Combine(Column1, Operator, Column2);
 
     [SetsRequiredMembers] private ConditionWithOtherColumn(
         Column column1,
@@ -63,59 +84,104 @@ public sealed record ConditionWithOtherColumn : ICondition
 }
 
 
-public interface ICondition
+public interface ICondition : IEquatable<ICondition>
 {
     IReadOnlyList<Column> Columns { get; }
     string Sql { get; }
 }
 
 
-public static class ConditionsBuilder
+public sealed class Conditions :
+    SortedList<int, ICondition>,
+    IReadOnlyDictionary<int, ICondition>,
+    IEquatable<Conditions>
 {
-    public static IReadOnlyList<ConditionWithValue> LessThan(this Column column, object value) =>
-        ConditionWithValue.NewList(column, Operator.LessThan, value);
+    public IReadOnlyList<Column> DistinctColumns() =>
+        this.Select(kvp =>
+            (kvp.Key, kvp.Value.Columns)
+        ).DistinctBy(kvp => kvp.Columns)
+        .OrderBy(kvp => kvp.Key)
+        .SelectMany(kvp => kvp.Columns)
+        .ToIReadOnlyList();
 
-    public static IReadOnlyList<ConditionWithValue> LessThanOrEqual(this Column column, object value) =>
-        ConditionWithValue.NewList(column, Operator.LessThanOrEqual, value);
+    public bool Equals(Conditions? other)
+    {
+        if(other is null || Count != other.Count)
+        {
+            return false;
+        }
 
-    public static IReadOnlyList<ConditionWithValue> GreaterThan(this Column column, object value) =>
-        ConditionWithValue.NewList(column, Operator.GreaterThan, value);
+        for (int i = 0; i < Count; i++)
+        {
+            if (!this[i].Equals(other[i]))
+            {
+                return false;
+            }
+        }
 
-    public static IReadOnlyList<ConditionWithValue> GreaterThanOrEqual(this Column column, object value) =>
-        ConditionWithValue.NewList(column, Operator.GreaterThanOrEqual, value);
+        return true;
+    }
 
-    public static IReadOnlyList<ConditionWithValue> Equal(this Column column, object value) =>
-        ConditionWithValue.NewList(column, Operator.Equal, value);
+    public override bool Equals(object? obj) =>
+        obj is not null &&
+        obj is Conditions other && 
+        Equals(other);
 
-    public static IReadOnlyList<ConditionWithValue> NotEqual(this Column column, object value) =>
-        ConditionWithValue.NewList(column, Operator.NotEqual, value);
+    public override int GetHashCode()
+    {
+        int hash = 17;
+        foreach (KeyValuePair<int, ICondition> kvp in this)
+        {
+            hash = hash * 31 + kvp.Key; // HashCode of the condition
+        }
+        return hash;
+    }
 
+    public Conditions And(Conditions other) =>
+        new([.. Values, .. other.Values]);
 
-    public static IReadOnlyList<ConditionWithOtherColumn> LessThan(this Column column1, Column column2) =>
-        ConditionWithOtherColumn.NewList(column1, Operator.LessThan, column2);
-
-    public static IReadOnlyList<ConditionWithOtherColumn> LessThanOrEqual(this Column column1, Column column2) =>
-        ConditionWithOtherColumn.NewList(column1, Operator.LessThanOrEqual, column2);
-
-    public static IReadOnlyList<ConditionWithOtherColumn> GreaterThan(this Column column1, Column column2) =>
-        ConditionWithOtherColumn.NewList(column1, Operator.GreaterThan, column2);
-
-    public static IReadOnlyList<ConditionWithOtherColumn> GreaterThanOrEqual(this Column column1, Column column2) =>
-        ConditionWithOtherColumn.NewList(column1, Operator.GreaterThanOrEqual, column2);
-
-    public static IReadOnlyList<ConditionWithOtherColumn> Equal(this Column column1, Column column2) =>
-        ConditionWithOtherColumn.NewList(column1, Operator.Equal, column2);
-
-    public static IReadOnlyList<ICondition> NotEqual(this Column column1, Column column2) =>
-        ConditionWithOtherColumn.NewList(column1, Operator.NotEqual, column2);
+    public Conditions(IList<ICondition> list) : base(
+        list.ToSortedList(cond => cond.GetHashCode())
+    ) { }
 }
 
 
-public static class Conditions
+public static class ConditionsBuilder
 {
-    public static IReadOnlyList<ICondition> And(this IReadOnlyList<ICondition> conditions, ConditionWithValue other) =>
-        [.. conditions, other];
+    public static Conditions LessThan(this Column column, object value) =>
+        ConditionWithValue.NewList(column, Operator.LessThan, value);
 
-    public static IReadOnlyList<ICondition> And(this IReadOnlyList<ICondition> conditions, ConditionWithOtherColumn other) =>
-        [.. conditions, other];
+    public static Conditions LessThanOrEqual(this Column column, object value) =>
+        ConditionWithValue.NewList(column, Operator.LessThanOrEqual, value);
+
+    public static Conditions GreaterThan(this Column column, object value) =>
+        ConditionWithValue.NewList(column, Operator.GreaterThan, value);
+
+    public static Conditions GreaterThanOrEqual(this Column column, object value) =>
+        ConditionWithValue.NewList(column, Operator.GreaterThanOrEqual, value);
+
+    public static Conditions Equal(this Column column, object value) =>
+        ConditionWithValue.NewList(column, Operator.Equal, value);
+
+    public static Conditions NotEqual(this Column column, object value) =>
+        ConditionWithValue.NewList(column, Operator.NotEqual, value);
+
+
+    public static Conditions LessThan(this Column column1, Column column2) =>
+        ConditionWithOtherColumn.NewList(column1, Operator.LessThan, column2);
+
+    public static Conditions LessThanOrEqual(this Column column1, Column column2) =>
+        ConditionWithOtherColumn.NewList(column1, Operator.LessThanOrEqual, column2);
+
+    public static Conditions GreaterThan(this Column column1, Column column2) =>
+        ConditionWithOtherColumn.NewList(column1, Operator.GreaterThan, column2);
+
+    public static Conditions GreaterThanOrEqual(this Column column1, Column column2) =>
+        ConditionWithOtherColumn.NewList(column1, Operator.GreaterThanOrEqual, column2);
+
+    public static Conditions Equal(this Column column1, Column column2) =>
+        ConditionWithOtherColumn.NewList(column1, Operator.Equal, column2);
+
+    public static Conditions NotEqual(this Column column1, Column column2) =>
+        ConditionWithOtherColumn.NewList(column1, Operator.NotEqual, column2);
 }
