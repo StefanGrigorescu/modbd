@@ -1,0 +1,24 @@
+-- Switch to ESHOP_GLOBAL PDB
+ALTER SESSION SET CONTAINER = ESHOP_GLOBAL;
+
+-- Create database link to ESHOP_MUNTENIA
+BEGIN
+  EXECUTE IMMEDIATE '
+    CREATE DATABASE LINK link_to_muntenia
+    CONNECT TO "muntenia_admin" IDENTIFIED BY "MunteniaAdminPassword123!"
+    USING ''(DESCRIPTION =
+      (ADDRESS = (PROTOCOL = TCP)(HOST = localhost)(PORT = 1521))
+      (CONNECT_DATA = (SERVICE_NAME = ESHOP_MUNTENIA)))''';
+END;
+/
+
+-- Create database link to ESHOP_ROMANIA
+BEGIN
+  EXECUTE IMMEDIATE '
+    CREATE DATABASE LINK link_to_romania
+    CONNECT TO "romania_admin" IDENTIFIED BY "RomaniaAdminPassword123!"
+    USING ''(DESCRIPTION =
+      (ADDRESS = (PROTOCOL = TCP)(HOST = localhost)(PORT = 1521))
+      (CONNECT_DATA = (SERVICE_NAME = ESHOP_ROMANIA)))''';
+END;
+/

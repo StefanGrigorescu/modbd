@@ -1,0 +1,13 @@
+-- Switch to ESHOP_ROMANIA PDB
+ALTER SESSION SET CONTAINER = ESHOP_ROMANIA;
+
+-- Create database link to ESHOP_GLOBAL
+BEGIN
+  EXECUTE IMMEDIATE '
+    CREATE DATABASE LINK link_to_global
+    CONNECT TO "global_admin" IDENTIFIED BY "GlobalAdminPassword123!"
+    USING ''(DESCRIPTION =
+      (ADDRESS = (PROTOCOL = TCP)(HOST = localhost)(PORT = 1521))
+      (CONNECT_DATA = (SERVICE_NAME = ESHOP_GLOBAL)))''';
+END;
+/
