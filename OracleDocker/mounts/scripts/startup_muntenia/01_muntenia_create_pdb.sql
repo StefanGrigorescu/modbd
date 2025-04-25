@@ -31,15 +31,13 @@ BEGIN
       -- Create the MUNTENIA_ADMIN user
       EXECUTE IMMEDIATE 'CREATE USER muntenia_admin IDENTIFIED BY "MunteniaAdminPassword123!"';
       DBMS_OUTPUT.PUT_LINE('MUNTENIA_ADMIN user was successfully created.');
-    ELSE
-      -- Update the password for MUNTENIA_ADMIN if it already exists
-      EXECUTE IMMEDIATE 'ALTER USER muntenia_admin IDENTIFIED BY "MunteniaAdminPassword123!"';
-      DBMS_OUTPUT.PUT_LINE('MUNTENIA_ADMIN user password was updated.');
-    END IF;
 
-    -- Grant the DBA role to MUNTENIA_ADMIN
-    EXECUTE IMMEDIATE 'GRANT DBA TO muntenia_admin';
-    DBMS_OUTPUT.PUT_LINE('MUNTENIA_ADMIN user was granted the DBA role.');
+      -- Grant the DBA role to MUNTENIA_ADMIN
+      EXECUTE IMMEDIATE 'GRANT DBA TO muntenia_admin';
+      DBMS_OUTPUT.PUT_LINE('MUNTENIA_ADMIN user was granted the DBA role.');
+    ELSE
+      DBMS_OUTPUT.PUT_LINE('MUNTENIA_ADMIN user already exists.');
+    END IF;
   END;
 END;
 /

@@ -31,15 +31,13 @@ BEGIN
       -- Create the GLOBAL_ADMIN user
       EXECUTE IMMEDIATE 'CREATE USER global_admin IDENTIFIED BY "GlobalAdminPassword123!"';
       DBMS_OUTPUT.PUT_LINE('GLOBAL_ADMIN user was successfully created.');
-    ELSE
-      -- Update the password for GLOBAL_ADMIN if it already exists
-      EXECUTE IMMEDIATE 'ALTER USER global_admin IDENTIFIED BY "GlobalAdminPassword123!"';
-      DBMS_OUTPUT.PUT_LINE('GLOBAL_ADMIN user password was updated.');
-    END IF;
 
-    -- Grant the DBA role to GLOBAL_ADMIN
-    EXECUTE IMMEDIATE 'GRANT DBA TO global_admin';
-    DBMS_OUTPUT.PUT_LINE('GLOBAL_ADMIN user was granted the DBA role.');
+      -- Grant the DBA role to GLOBAL_ADMIN
+      EXECUTE IMMEDIATE 'GRANT DBA TO global_admin';
+      DBMS_OUTPUT.PUT_LINE('GLOBAL_ADMIN user was granted the DBA role.');
+    ELSE
+      DBMS_OUTPUT.PUT_LINE('GLOBAL_ADMIN user already exists.');
+    END IF;
   END;
 END;
 /

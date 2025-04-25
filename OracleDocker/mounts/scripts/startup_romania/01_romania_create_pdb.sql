@@ -31,15 +31,13 @@ BEGIN
       -- Create the ROMANIA_ADMIN user
       EXECUTE IMMEDIATE 'CREATE USER romania_admin IDENTIFIED BY "RomaniaAdminPassword123!"';
       DBMS_OUTPUT.PUT_LINE('ROMANIA_ADMIN user was successfully created.');
-    ELSE
-      -- Update the password for ROMANIA_ADMIN if it already exists
-      EXECUTE IMMEDIATE 'ALTER USER romania_admin IDENTIFIED BY "RomaniaAdminPassword123!"';
-      DBMS_OUTPUT.PUT_LINE('ROMANIA_ADMIN user password was updated.');
-    END IF;
 
-    -- Grant the DBA role to ROMANIA_ADMIN
-    EXECUTE IMMEDIATE 'GRANT DBA TO romania_admin';
-    DBMS_OUTPUT.PUT_LINE('ROMANIA_ADMIN user was granted the DBA role.');
+      -- Grant the DBA role to ROMANIA_ADMIN
+      EXECUTE IMMEDIATE 'GRANT DBA TO romania_admin';
+      DBMS_OUTPUT.PUT_LINE('ROMANIA_ADMIN user was granted the DBA role.');
+    ELSE
+      DBMS_OUTPUT.PUT_LINE('ROMANIA_ADMIN user already exists.');
+    END IF;
   END;
 END;
 /
