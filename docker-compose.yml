@@ -15,9 +15,9 @@ services:
       ORACLE_CHARACTERSET: "AL32UTF8" # Default: AL32UTF8
       ENABLE_ARCHIVELOG: "true" # Enable archive log mode
     volumes:
-      - ${PROJECT_PATH}\OracleDocker\mounts\oradata:/opt/oracle/oradata # Persistent data storage
-      - ${PROJECT_PATH}\OracleDocker\mounts\scripts\startup:/opt/oracle/scripts/startup # Optional startup scripts
-      - ${PROJECT_PATH}\OracleDocker\mounts\scripts\setup:/opt/oracle/scripts/setup # Optional setup scripts
+      - ${PROJECT_PATH}/OracleDocker/mounts/oradata:/opt/oracle/oradata # Persistent data storage
+      - ${PROJECT_PATH}/OracleDocker/mounts/scripts/startup:/opt/oracle/scripts/startup # Optional startup scripts
+      - ${PROJECT_PATH}/OracleDocker/mounts/scripts/setup:/opt/oracle/scripts/setup # Optional setup scripts
     shm_size: "1g" # Shared memory allocation for the container
     healthcheck:
       test: [ "CMD", "ls", "/opt/oracle/oradata" ]
@@ -42,8 +42,8 @@ services:
       ORACLE_CHARACTERSET: "AL32UTF8"
       ENABLE_ARCHIVELOG: "true"
     volumes:
-      - ${PROJECT_PATH}\OracleDocker\mounts\oradata_global:/opt/oracle/oradata # Persistent storage for the global database
-      - ${PROJECT_PATH}\OracleDocker\mounts\scripts\startup_global:/opt/oracle/scripts/startup # Startup scripts for the global database
+      - ${PROJECT_PATH}/OracleDocker/mounts/oradata_global:/opt/oracle/oradata # Persistent storage for the global database
+      - ${PROJECT_PATH}/OracleDocker/mounts/scripts/startup_global:/opt/oracle/scripts/startup # Startup scripts for the global database
     shm_size: "1g"
     networks:
       - modbd_network
@@ -63,8 +63,8 @@ services:
       ORACLE_CHARACTERSET: "AL32UTF8"
       ENABLE_ARCHIVELOG: "true"
     volumes:
-      - ${PROJECT_PATH}\OracleDocker\mounts\oradata_muntenia:/opt/oracle/oradata # Persistent storage for Muntenia database
-      - ${PROJECT_PATH}\OracleDocker\mounts\scripts\startup_muntenia:/opt/oracle/scripts/startup # Startup scripts for Muntenia database
+      - ${PROJECT_PATH}/OracleDocker/mounts/oradata_muntenia:/opt/oracle/oradata # Persistent storage for Muntenia database
+      - ${PROJECT_PATH}/OracleDocker/mounts/scripts/startup_muntenia:/opt/oracle/scripts/startup # Startup scripts for Muntenia database
     shm_size: "1g"
     networks:
       - modbd_network
@@ -84,8 +84,8 @@ services:
       ORACLE_CHARACTERSET: "AL32UTF8"
       ENABLE_ARCHIVELOG: "true"
     volumes:
-      - ${PROJECT_PATH}\OracleDocker\mounts\oradata_romania:/opt/oracle/oradata # Persistent storage for Romania database
-      - ${PROJECT_PATH}\OracleDocker\mounts\scripts\startup_romania:/opt/oracle/scripts/startup # Startup scripts for Romania database
+      - ${PROJECT_PATH}/OracleDocker/mounts/oradata_romania:/opt/oracle/oradata # Persistent storage for Romania database
+      - ${PROJECT_PATH}/OracleDocker/mounts/scripts/startup_romania:/opt/oracle/scripts/startup # Startup scripts for Romania database
     shm_size: "1g"
     networks:
       - modbd_network
