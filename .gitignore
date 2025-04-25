@@ -532,4 +532,7 @@ dist
 js_dbtest/package-lock.json
 
 oradata
+oradata_global
+oradata_muntenia
+oradata_romania
 .env

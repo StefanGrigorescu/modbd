@@ -26,7 +26,69 @@ services:
       retries: 5
     networks:
       - modbd_network
+  oracle-global-db:
+    image: container-registry.oracle.com/database/enterprise:21.3.0.0
+    container_name: EShopGlobalDB
+    ports:
+      - "1525:1521" # Oracle Listener for the global database
+      - "1528:5500" # OEM Express for the global database
+    environment:
+      ORACLE_SID: "GLOBALCDB" # SID for the global database
+      ORACLE_PDB: "ESHOP_GLOBAL" # PDB for the global database
+      ORACLE_PWD: "GlobalSecurePassword123!"
+      INIT_SGA_SIZE: "2048" # 2 GB for SGA
+      INIT_PGA_SIZE: "1024" # 1 GB for PGA
+      ORACLE_EDITION: "enterprise"
+      ORACLE_CHARACTERSET: "AL32UTF8"
+      ENABLE_ARCHIVELOG: "true"
+    volumes:
+      - ${PROJECT_PATH}\OracleDocker\mounts\oradata_global:/opt/oracle/oradata # Persistent storage for the global database
+      - ${PROJECT_PATH}\OracleDocker\mounts\scripts\startup_global:/opt/oracle/scripts/startup # Startup scripts for the global database
+    shm_size: "1g"
+    networks:
+      - modbd_network
 
+  oracle-muntenia-db:
+    image: container-registry.oracle.com/database/enterprise:21.3.0.0
+    container_name: EShopMunteniaDB
+    ports:
+      - "1526:1521" # Oracle Listener for Muntenia database
+    environment:
+      ORACLE_SID: "MUNTENIACDB" # SID for Muntenia database
+      ORACLE_PDB: "ESHOP_MUNTENIA" # PDB for Muntenia database
+      ORACLE_PWD: "MunteniaSecurePassword123!"
+      INIT_SGA_SIZE: "2048" # 2 GB for SGA
+      INIT_PGA_SIZE: "1024" # 1 GB for PGA
+      ORACLE_EDITION: "enterprise"
+      ORACLE_CHARACTERSET: "AL32UTF8"
+      ENABLE_ARCHIVELOG: "true"
+    volumes:
+      - ${PROJECT_PATH}\OracleDocker\mounts\oradata_muntenia:/opt/oracle/oradata # Persistent storage for Muntenia database
+      - ${PROJECT_PATH}\OracleDocker\mounts\scripts\startup_muntenia:/opt/oracle/scripts/startup # Startup scripts for Muntenia database
+    shm_size: "1g"
+    networks:
+      - modbd_network
+
+  oracle-romania-db:
+    image: container-registry.oracle.com/database/enterprise:21.3.0.0
+    container_name: EShopRomaniaDB
+    ports:
+      - "1527:1521" # Oracle Listener for Romania database
+    environment:
+      ORACLE_SID: "ROMANIACDB" # SID for Romania database
+      ORACLE_PDB: "ESHOP_ROMANIA" # PDB for Romania database
+      ORACLE_PWD: "RomaniaSecurePassword123!"
+      INIT_SGA_SIZE: "2048" # 2 GB for SGA
+      INIT_PGA_SIZE: "1024" # 1 GB for PGA
+      ORACLE_EDITION: "enterprise"
+      ORACLE_CHARACTERSET: "AL32UTF8"
+      ENABLE_ARCHIVELOG: "true"
+    volumes:
+      - ${PROJECT_PATH}\OracleDocker\mounts\oradata_romania:/opt/oracle/oradata # Persistent storage for Romania database
+      - ${PROJECT_PATH}\OracleDocker\mounts\scripts\startup_romania:/opt/oracle/scripts/startup # Startup scripts for Romania database
+    shm_size: "1g"
+    networks:
+      - modbd_network
   modbd-api:
     build:
       context: .
