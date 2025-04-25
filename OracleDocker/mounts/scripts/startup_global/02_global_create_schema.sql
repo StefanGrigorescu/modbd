@@ -15,7 +15,7 @@ BEGIN
     IF user_exists = 0 THEN
         -- Create GLOBAL schema
         EXECUTE IMMEDIATE '
-            CREATE USER eshop_global_user IDENTIFIED BY GlobalUserPassword123!
+            CREATE USER eshop_global_user IDENTIFIED BY "GlobalUserPassword123!"
             ACCOUNT UNLOCK
         ';
         DBMS_OUTPUT.PUT_LINE('global_create_schema: User eshop_global_user was successfully created.');
