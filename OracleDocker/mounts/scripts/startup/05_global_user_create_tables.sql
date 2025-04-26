@@ -6,7 +6,9 @@ ALTER SESSION SET CONTAINER = ESHOP_GLOBAL;
 -- Set the schema to the desired user
 ALTER SESSION SET CURRENT_SCHEMA = ESHOP_GLOBAL_USER;
 
--- Create TRY_CREATE_TABLE procedure
+-- Dynamically include the audit setup script using the PROJECT_PATH environment variable
+@&PROJECT_PATH\OracleDocker\mounts\scripts\startup\04_audit_setup.sql
+
 CREATE OR REPLACE PROCEDURE TRY_CREATE_TABLE (
     tbl_name IN VARCHAR2,
     cols_and_constraints_csv IN VARCHAR2,
@@ -17,14 +19,14 @@ BEGIN
     -- Ensure the procedure operates under the correct schema
     EXECUTE IMMEDIATE 'ALTER SESSION SET CURRENT_SCHEMA = ESHOP_GLOBAL_USER';
 
-    -- Debug log (optional, remove if not needed)
-    DBMS_OUTPUT.PUT_LINE(
+    LOG_DEBUG(
         'eshop_global/TRY_CREATE_TABLE: Trying to create table ' || tbl_name || 
         ' | Container = ' || SYS_CONTEXT('USERENV', 'CON_NAME') || 
         ' | Schema = ' || SYS_CONTEXT('USERENV', 'CURRENT_SCHEMA') || 
-        ' | Connected as = ' || SYS_CONTEXT('USERENV', 'SESSION_USER')
+        ' | Connected as = ' || SYS_CONTEXT('USERENV', 'SESSION_USER'), 
+        created_by
     );
-    
+
     -- Check if table exists
     SELECT COUNT(*) INTO table_exists
     FROM USER_TABLES
@@ -35,13 +37,13 @@ BEGIN
             CREATE TABLE ' || UPPER(tbl_name) || ' ( ' ||
             cols_and_constraints_csv || ' 
         )';
-        DBMS_OUTPUT.PUT_LINE('TRY_CREATE_TABLE: Table ' || tbl_name || ' created.');
+        LOG_INFORMATION('TRY_CREATE_TABLE: Table ' || tbl_name || ' created.', created_by);
     ELSE
-        DBMS_OUTPUT.PUT_LINE('TRY_CREATE_TABLE: Table ' || tbl_name || ' already exists.');
+        LOG_INFORMATION('TRY_CREATE_TABLE: Table ' || tbl_name || ' already exists.', created_by);
     END IF;
 EXCEPTION
     WHEN OTHERS THEN
-        DBMS_OUTPUT.PUT_LINE('TRY_CREATE_TABLE: Error creating table ' || tbl_name || ': ' || SQLERRM);
+        LOG_ERROR('TRY_CREATE_TABLE: Error creating table ' || tbl_name || ': ' || SQLERRM, created_by);
 END;
 /
 

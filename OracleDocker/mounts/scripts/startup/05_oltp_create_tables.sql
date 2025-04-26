@@ -45,7 +45,6 @@ EXCEPTION
 END;
 /
 
-
 BEGIN
     -- Check and create IDNT_Regions table
     TRY_CREATE_TABLE('IDNT_REGIONS', ' 
