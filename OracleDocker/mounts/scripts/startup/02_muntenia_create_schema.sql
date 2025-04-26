@@ -1,0 +1,40 @@
+SET SERVEROUTPUT ON;
+
+-- Switch to MUNTENIA PDB
+ALTER SESSION SET CONTAINER = eshop_muntenia;
+
+-- Check if user eshop_muntenia_user exists
+DECLARE
+    user_exists NUMBER := 0;
+BEGIN
+    SELECT COUNT(*)
+    INTO user_exists
+    FROM dba_users
+    WHERE username = 'ESHOP_MUNTENIA_USER';
+
+    IF user_exists = 0 THEN
+        -- Create MUNTENIA schema
+        EXECUTE IMMEDIATE '
+            CREATE USER eshop_muntenia_user IDENTIFIED BY "MunteniaUserPassword123!"
+            ACCOUNT UNLOCK
+        ';
+        DBMS_OUTPUT.PUT_LINE('muntenia_create_schema: User eshop_muntenia_user was successfully created.');
+    ELSE
+        DBMS_OUTPUT.PUT_LINE('muntenia_create_schema: User eshop_muntenia_user already exists.');
+    END IF;
+END;
+/
+
+-- Grant necessary privileges directly to the user
+BEGIN
+    EXECUTE IMMEDIATE 'GRANT CONNECT TO ESHOP_MUNTENIA_USER';
+    EXECUTE IMMEDIATE 'GRANT RESOURCE TO ESHOP_MUNTENIA_USER';
+    EXECUTE IMMEDIATE 'GRANT CREATE TABLE TO ESHOP_MUNTENIA_USER';
+    EXECUTE IMMEDIATE 'GRANT CREATE VIEW TO ESHOP_MUNTENIA_USER';
+    EXECUTE IMMEDIATE 'GRANT CREATE SEQUENCE TO ESHOP_MUNTENIA_USER';
+    EXECUTE IMMEDIATE 'GRANT CREATE TRIGGER TO ESHOP_MUNTENIA_USER';
+    EXECUTE IMMEDIATE 'GRANT UNLIMITED TABLESPACE TO ESHOP_MUNTENIA_USER';
+
+    DBMS_OUTPUT.PUT_LINE('muntenia_create_schema: Necessary privileges were granted to eshop_muntenia_user.');
+END;
+/

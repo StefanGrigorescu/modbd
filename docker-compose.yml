@@ -15,9 +15,8 @@ services:
       ORACLE_CHARACTERSET: "AL32UTF8" # Default: AL32UTF8
       ENABLE_ARCHIVELOG: "true" # Enable archive log mode
     volumes:
-      - ${PROJECT_PATH}\OracleDocker\mounts\oradata:/opt/oracle/oradata # Persistent data storage
-      - ${PROJECT_PATH}\OracleDocker\mounts\scripts\startup:/opt/oracle/scripts/startup # Optional startup scripts
-      - ${PROJECT_PATH}\OracleDocker\mounts\scripts\setup:/opt/oracle/scripts/setup # Optional setup scripts
+      - ${PROJECT_PATH}/OracleDocker/mounts/oradata:/opt/oracle/oradata # Persistent data storage
+      - ${PROJECT_PATH}/OracleDocker/mounts/scripts/startup:/opt/oracle/scripts/startup # Consolidated startup scripts
     shm_size: "1g" # Shared memory allocation for the container
     healthcheck:
       test: [ "CMD", "ls", "/opt/oracle/oradata" ]
