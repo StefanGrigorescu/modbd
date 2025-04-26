@@ -9,6 +9,7 @@ namespace MODBD_Core.Applications;
 public interface IApplication
 {
     Positive<double> FrequencyPerMonth { get; }
+    Positive<int> Selectivity { get; }
     string Sql { get; }
     IReadOnlyList<Column> AllColumns { get; }
     Conditions WhereConditions { get; }
@@ -36,7 +37,7 @@ public sealed record Application<TTable> : IApplication
         this with { FrequencyPerMonth = frequencyPerMonth, };
 
     public Application<TTable> WithSelectivity(int selectivity) =>
-        WithFrequencyPerMonth(Positive<double>.From(selectivity));
+        WithSelectivity(Positive<int>.From(selectivity));
 
     public Application<TTable> WithSelectivity(Positive<int> selectivity) =>
         this with { Selectivity = selectivity, };
@@ -80,6 +81,7 @@ public sealed record Application<TTable1, TTable2> : IApplication
     where TTable2 : Table<TTable2>
 {
     public required Positive<double> FrequencyPerMonth { get; init; }
+    public required Positive<int> Selectivity { get; init; }
     public required Func<TTable1, TTable2, IReadOnlyList<Column>> Select { get; init; }
     public required AliasedTable<TTable1> Table1 { get; init; }
     public required AliasedTable<TTable2> Table2 { get; init; }

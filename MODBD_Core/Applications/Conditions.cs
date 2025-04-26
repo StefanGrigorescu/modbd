@@ -1,9 +1,11 @@
 ﻿using MODBD_Common.Collections;
 using MODBD_Core.Schema;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 
 namespace MODBD_Core.Applications;
 
+[DebuggerDisplay("{Column} {Operator} {Value}")]
 public sealed record ConditionWithValue : ICondition
 {
     public required Column Column { get; init; }
@@ -12,6 +14,9 @@ public sealed record ConditionWithValue : ICondition
 
     public required IReadOnlyList<Column> Columns { get; init; }
     public required string Sql { get; init; }
+
+    public ICondition Not() =>
+        new ConditionWithValue(Column, Operator.Not(Operator), Value);
 
     public static Conditions NewList(Column column, Operator @operator, object value) =>
         new([new ConditionWithValue(column, @operator, value)]);
@@ -44,6 +49,7 @@ public sealed record ConditionWithValue : ICondition
     }
 }
 
+[DebuggerDisplay("{Column1} {Operator} {Column2}")]
 public sealed record ConditionWithOtherColumn : ICondition
 {
     public required Column Column1 { get; init; }
@@ -52,6 +58,9 @@ public sealed record ConditionWithOtherColumn : ICondition
 
     public required IReadOnlyList<Column> Columns { get; init; }
     public required string Sql { get; init; }
+
+    public ICondition Not() =>
+        new ConditionWithOtherColumn(Column1, Operator.Not(Operator), Column2);
 
     public static Conditions NewList(Column column1, Operator @operator, Column column2) =>
         new([new ConditionWithOtherColumn(column1, @operator, column2)]);
@@ -88,6 +97,7 @@ public interface ICondition : IEquatable<ICondition>
 {
     IReadOnlyList<Column> Columns { get; }
     string Sql { get; }
+    ICondition Not();
 }
 
 
@@ -111,15 +121,10 @@ public sealed class Conditions :
             return false;
         }
 
-        for (int i = 0; i < Count; i++)
-        {
-            if (!this[i].Equals(other[i]))
-            {
-                return false;
-            }
-        }
-
-        return true;
+        return !this.Any((KeyValuePair<int, ICondition> kvp) =>                         // any key 
+            !other.TryGetValue(kvp.Key, out ICondition? otherCondition) ||      // not found in other dictionary
+                !kvp.Value.Equals(otherCondition)                                               // or with different value
+        );
     }
 
     public override bool Equals(object? obj) =>
@@ -137,10 +142,17 @@ public sealed class Conditions :
         return hash;
     }
 
-    public Conditions And(Conditions other) =>
-        new([.. Values, .. other.Values]);
+    public Conditions And(ICondition other) =>
+        new([.. Values, other]);
+
+    public Conditions And(Conditions others) =>
+        new([.. Values, .. others.Values]);
 
     public Conditions(IList<ICondition> list) : base(
+        list.ToSortedList(cond => cond.GetHashCode())
+    ) { }
+
+    public Conditions(IEnumerable<ICondition> list) : base(
         list.ToSortedList(cond => cond.GetHashCode())
     ) { }
 }

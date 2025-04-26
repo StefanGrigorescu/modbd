@@ -1,5 +1,8 @@
-﻿namespace MODBD_Core.Schema;
+﻿using System.Diagnostics;
 
+namespace MODBD_Core.Schema;
+
+[DebuggerDisplay("{Name}")]
 public record Column
 {
     public required string Name { get; init; }
@@ -14,6 +17,7 @@ public record Column
 }
 
 
+[DebuggerDisplay("{TableAlias}.{Name}")]
 public sealed record ColumnOfTable : Column
 {
     public required string TableAlias { get; init; }

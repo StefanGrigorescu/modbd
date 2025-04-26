@@ -1,7 +1,9 @@
-﻿using MODBD_Analiza.IO;
+﻿using MODBD_Core.Applications;
 using MODBD_Core.EShop;
+using MODBD_Core.IO;
 
-Output output = new();
+ConsoleOutput output = new();
+//FileOutput output = new("analiza.txt");
 
 output.WriteLine("Hello, World!\n");
 
@@ -18,5 +20,13 @@ output.WriteEntityApplications(orderItemsApplications);
 output.WriteSimplePredicatesOf(usersApplications);
 output.WriteSimplePredicatesOf(ordersApplications);
 output.WriteSimplePredicatesOf(orderItemsApplications);
+
+Conditions completeMinimalPredicates = CompleteMinimalPredicates.Of(ordersApplications, output);
+output.WriteLine("Complete minimal predicates of orders: {");
+foreach (ICondition condition in completeMinimalPredicates.Values)
+{
+    output.WriteLine(condition.Sql);
+}
+output.WriteLine("}\n");
 
 output.WriteLine("Finished running program.");

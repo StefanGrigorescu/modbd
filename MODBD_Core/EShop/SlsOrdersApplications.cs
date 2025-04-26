@@ -27,11 +27,6 @@ public sealed record SlsOrdersApplications : EntityApplications<SlsOrders>
     private const int _idCompleted = 1;
     private const int _idCanceled = 2;
 
-
-    public IApplication? SingleOrDefaultByWhereConditions(
-        Conditions conditions
-    ) => All.SingleOrDefault(app => app.WhereConditions.Equals(conditions));
-
     
     public static SlsOrdersApplications New(EShopSchema eshop)
     {

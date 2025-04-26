@@ -8,6 +8,12 @@ public abstract record EntityApplications<TTable>
 {
     public required IReadOnlyList<IApplication> All { get; init; }
     public required IReadOnlyList<ICondition> AllSimplePredicates { get; init; }
+
+    public IApplication SingleByWhereConditions(
+        Conditions conditions
+    ) => All.Single(app => 
+        app.WhereConditions.Equals(conditions)
+    );
 }
 
 

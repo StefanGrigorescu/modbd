@@ -11,12 +11,12 @@ public sealed record SlsOrderItemsApplications : EntityApplications<SlsOrderItem
         SlsOrderItemsApplications apps = new()
         {
             GetOrderItemsInRegion = eshop
-            .SlsOrderItems.As("oi")
-            .InnerJoin(
-                eshop.SlsOrders.As("o"),
-                (oi, o) => oi.OrderId.Equal(o.Id)
-            ).Select((oi, o) => [oi.OrderId, oi.ProductId, oi.Quantity, oi.CreatedOn, oi.LastUpdatedOn])
-            .Where((oi, o) => o.CustomerRegionId.Equal(new SqlQueryParameter("p_region_id"))),
+                .SlsOrderItems.As("oi")
+                .InnerJoin(
+                    eshop.SlsOrders.As("o"),
+                    (oi, o) => oi.OrderId.Equal(o.Id)
+                ).Select((oi, o) => [oi.OrderId, oi.ProductId, oi.Quantity, oi.CreatedOn, oi.LastUpdatedOn])
+                .Where((oi, o) => o.CustomerRegionId.Equal(new SqlQueryParameter("p_region_id"))),
 
             All = [],
             AllSimplePredicates = [],
