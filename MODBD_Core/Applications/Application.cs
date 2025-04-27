@@ -15,6 +15,7 @@ public interface IApplication
     string Sql { get; }
     IReadOnlyList<Column> AllColumns { get; }
     Conditions WhereConditions { get; }
+    bool IsMain { get; }
 }
 
 
@@ -32,6 +33,10 @@ public sealed record Application<TTable> : IApplication
     public required IReadOnlyList<Column> WhereColumns { get; init; }
     public required IReadOnlyList<Column> AllColumns { get; init; }
     public required string Sql { get; init; }
+    /// <summary>
+    /// Marks this application if it is one of the main ones over the table.
+    /// </summary>
+    public required bool IsMain { get; init; }
 
     public Application<TTable> WithFrequencyPerMonth(double frequencyPerMonth) =>
         WithFrequencyPerMonth(Positive<double>.From(frequencyPerMonth));
@@ -51,6 +56,9 @@ public sealed record Application<TTable> : IApplication
     public Application<TTable> WithName(TextFieldSm name) =>
         this with { Name = name, };
 
+    public Application<TTable> WithIsMain(bool isMain = true) =>
+        this with { IsMain = isMain, };
+
     public static Application<TTable> New(Func<TTable, IReadOnlyList<Column>> select, TTable table, Func<TTable, Conditions> where) =>
         new(select, table, where);
 
@@ -66,6 +74,7 @@ public sealed record Application<TTable> : IApplication
         Select = select;
         Table = table;
         Where = where;
+        IsMain = false;
 
         WhereConditions = Where(table);
 
@@ -104,6 +113,10 @@ public sealed record Application<TTable1, TTable2> : IApplication
     public required IReadOnlyList<Column> OnColumns { get; init; }
     public required IReadOnlyList<Column> AllColumns { get; init; }
     public required string Sql { get; init; }
+    /// <summary>
+    /// Marks this application if it is one of the main ones over the table.
+    /// </summary>
+    public required bool IsMain { get; init; }
 
     public Application<TTable1, TTable2> WithFrequencyPerMonth(double frequencyPerMonth) =>
         WithFrequencyPerMonth(Positive<double>.From(frequencyPerMonth));
@@ -122,6 +135,9 @@ public sealed record Application<TTable1, TTable2> : IApplication
 
     public Application<TTable1, TTable2> WithName(TextFieldSm name) =>
         this with { Name = name, };
+
+    public Application<TTable1, TTable2> WithIsMain(bool isMain = true) =>
+        this with { IsMain = isMain, };
 
     public static Application<TTable1, TTable2> New(
         Func<TTable1, TTable2, IReadOnlyList<Column>> select,
@@ -147,6 +163,7 @@ public sealed record Application<TTable1, TTable2> : IApplication
         Table2 = table2;
         On = on;
         Where = where;
+        IsMain = false;
 
         Conditions onConditions = On(table1, table2);
         WhereConditions = Where(table1, table2);

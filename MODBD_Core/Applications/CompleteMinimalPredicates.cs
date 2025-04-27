@@ -1,7 +1,5 @@
-﻿using MODBD_Common.NumericTypes.Ranges;
-using MODBD_Core.IO;
+﻿using MODBD_Core.IO;
 using MODBD_Core.Schema;
-using System.Numerics;
 
 namespace MODBD_Core.Applications;
 
@@ -20,14 +18,18 @@ public static class CompleteMinimalPredicates
         {
             if (! apps.IsSimplePredicateRelevant(
                 new Conditions(completeMinimalSimplePredicates),
-                simplePredicate
+                simplePredicate,
+                output
             )) {
+                output.WriteLine($"Skipping {simplePredicate.Sql} as it is not revelant.\n");
                 continue;
             }
 
-            output.WriteLine($"Adding {simplePredicate.Sql} to complete minimal predicates.");
+            output.WriteLine($"Adding {simplePredicate.Sql} to complete minimal simple predicates.\n");
             completeMinimalSimplePredicates.Add(simplePredicate);
 
+            output.WriteLine($"Checking complete minimal simple predicates set if any predicate is not relevant anymore.");
+            int removedAnyPredicatesCount = 0;
             for(int i = 0; i < completeMinimalSimplePredicates.Count - 1; i++)
             {
                 ICondition currentPredicate = completeMinimalSimplePredicates[i];
@@ -38,12 +40,22 @@ public static class CompleteMinimalPredicates
 
                 if (! apps.IsSimplePredicateRelevant(
                     new Conditions(completeMinimalSimplePredicates.Where(p => p != currentPredicate)),
-                    currentPredicate
+                    currentPredicate,
+                    output
                 )) {
-                    output.WriteLine($"Removing {currentPredicate.Sql} from complete minimal predicates.");
+                    output.WriteLine($"Removing {currentPredicate.Sql} from complete minimal simple predicates, as it is not revelant anymore.");
                     completeMinimalSimplePredicates.RemoveAt(i);
                     i--;
+                    removedAnyPredicatesCount++;
                 }
+            }
+            if( removedAnyPredicatesCount == 0)
+            {
+                output.WriteLine($"No predicates were removed from complete minimal simple predicates set.\n");
+            } 
+            else
+            {
+                output.WriteLine($"{removedAnyPredicatesCount} irrelevant predicates were removed from complete minimal simple predicates set.\n");
             }
         }
 
@@ -53,47 +65,29 @@ public static class CompleteMinimalPredicates
     private static bool IsSimplePredicateRelevant<TTable>(
         this EntityApplications<TTable> apps, 
         Conditions completeMinimalSimplePredicates, 
-        ICondition simplePredicate
+        ICondition simplePredicate,
+        IOutput output
     )
         where TTable : Table<TTable>
     {
+        output.WriteLine($"\nChecking relevance of {simplePredicate.Sql}");
+
         IApplication firstFragment = apps.SingleByWhereConditions(
-            completeMinimalSimplePredicates.And(simplePredicate)
+            completeMinimalSimplePredicates.And(simplePredicate),
+            output
         );
         IApplication secondFragment = apps.SingleByWhereConditions(
-            completeMinimalSimplePredicates.And(simplePredicate.Not())
+            completeMinimalSimplePredicates.And(simplePredicate.Not()),
+            output
         );
 
-        double firstFragmentRatio = firstFragment.FrequencyPerMonth / firstFragment.Selectivity;
-        double secondFragmentRatio = secondFragment.FrequencyPerMonth / secondFragment.Selectivity;
+        double firstFragmentRatio = firstFragment.FrequencyPerMonth / (firstFragment.Selectivity + 1);
+        double secondFragmentRatio = secondFragment.FrequencyPerMonth / (secondFragment.Selectivity + 1);
+
+        string comparisonSingn = firstFragmentRatio != secondFragmentRatio ? "<>" : "=";
+        output.WriteLine($"Comparing  {firstFragment.FrequencyPerMonth} / ({firstFragment.Selectivity} + 1)  and  {secondFragment.FrequencyPerMonth} / ({secondFragment.Selectivity} + 1): ");
+        output.WriteLine($"\t{firstFragmentRatio} {comparisonSingn} {secondFragmentRatio}");
 
         return firstFragmentRatio != secondFragmentRatio;
-    }
-}
-
-
-public static class NonSensicalCompositePredicates
-{
-    public static bool HasNoSense(this Conditions compositePredicate)
-    {
-        foreach(ICondition condition in compositePredicate.Values)
-        {
-            foreach (ICondition otherCondition in compositePredicate.Values)
-            {
-                if (condition.Equals(otherCondition))
-                {
-                    continue;
-                }
-                if (
-                    condition is ConditionWithValue<int> conditionWithValue &&
-                    otherCondition is ConditionWithValue<int> otherConditionWithValue &&
-                    ! conditionWithValue.Codomain.Intersect(otherConditionWithValue.Codomain).Any()
-                ) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
     }
 }

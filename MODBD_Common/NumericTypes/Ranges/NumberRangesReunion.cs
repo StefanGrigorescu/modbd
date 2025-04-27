@@ -6,9 +6,17 @@ namespace MODBD_Common.NumericTypes.Ranges;
 public sealed class NumberRangesReunion<TNumber> :
     ReadOnlyCollection<NumberRange<TNumber>>,
     INumberSet<TNumber>,
-    IReadOnlyList<NumberRange<TNumber>>
+    IReadOnlyList<NumberRange<TNumber>>,
+    IEquatable<NumberRangesReunion<TNumber>>
     where TNumber : struct, INumber<TNumber>, IMinMaxValue<TNumber>
 {
+    public bool Equals(NumberRangesReunion<TNumber>? other) =>
+        other is not null && 
+        Count == other.Count && 
+        !this.Any((NumberRange<TNumber> range) =>
+            ! other.Contains(range)
+        );
+
     public NumberRangesReunion<TNumber> Intersect(NumberRangesReunion<TNumber> other) => From(
         other   // for each other range, create an intersections with my ranges
             .SelectMany(IntersectAsIEnumerable) // then flat map them to reunite them

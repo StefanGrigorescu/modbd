@@ -40,7 +40,8 @@ public sealed record SlsOrdersApplications : EntityApplications<SlsOrders>
                 .Where(o => o.CustomerRegionId.Equal(_idMuntenia))
                 .WithFrequencyPerMonth(30000)
                 .WithSelectivity(600_000_000)
-                .WithName(nameof(GetOrdersInMuntenia)),
+                .WithName(nameof(GetOrdersInMuntenia))
+                .WithIsMain(),
 
             GetOrdersNotInMuntenia = selectFromSlsOrders()
                 .Where(o => o.CustomerRegionId.NotEqual(_idMuntenia))
@@ -52,7 +53,8 @@ public sealed record SlsOrdersApplications : EntityApplications<SlsOrders>
                 .Where(o => o.StatusId.Equal(_idCompleted))
                 .WithFrequencyPerMonth(2000)
                 .WithSelectivity(650_000_000)
-                .WithName(nameof(GetCompletedOrders)),
+                .WithName(nameof(GetCompletedOrders))
+                .WithIsMain(),
 
             GetNotCompletedOrders = selectFromSlsOrders()
                 .Where(o => o.StatusId.NotEqual(_idCompleted))
@@ -70,7 +72,8 @@ public sealed record SlsOrdersApplications : EntityApplications<SlsOrders>
                 .Where(o => o.StatusId.NotEqual(_idCanceled))
                 .WithFrequencyPerMonth(60)
                 .WithSelectivity(700_000_000)
-                .WithName(nameof(GetNotCanceledOrders)),
+                .WithName(nameof(GetNotCanceledOrders))
+                .WithIsMain(),
 
 
             GetCompletedOrdersInMuntenia = selectFromSlsOrders()
@@ -79,7 +82,8 @@ public sealed record SlsOrdersApplications : EntityApplications<SlsOrders>
                     .And(o.CustomerRegionId.Equal(_idMuntenia))
                 ).WithFrequencyPerMonth(900)
                 .WithSelectivity(550_000_000)
-                .WithName(nameof(GetCompletedOrdersInMuntenia)),
+                .WithName(nameof(GetCompletedOrdersInMuntenia))
+                .WithIsMain(),
 
             GetNotCompletedOrdersInMuntenia = selectFromSlsOrders()
                 .Where(o =>
@@ -103,7 +107,8 @@ public sealed record SlsOrdersApplications : EntityApplications<SlsOrders>
                     .And(o.CustomerRegionId.Equal(_idMuntenia))
                 ).WithFrequencyPerMonth(3)
                 .WithSelectivity(565_000_000)
-                .WithName(nameof(GetNotCanceledOrdersInMuntenia)),
+                .WithName(nameof(GetNotCanceledOrdersInMuntenia))
+                .WithIsMain(),
 
 
             GetCompletedOrdersNotInMuntenia = selectFromSlsOrders()
@@ -141,15 +146,18 @@ public sealed record SlsOrdersApplications : EntityApplications<SlsOrders>
 
             All = [],
             AllSimplePredicates = [],
+            AllMain = [],
         };
 
         IReadOnlyList<IApplication> all = apps.GetAllApplications();
         IReadOnlyList<ICondition> allSimplePredicates = all.GetAllSimplePredicates();
+        IReadOnlyList<IApplication> allMainApplications = all.GetAllMainApplications();
 
         return apps with
         {
             All = all,
             AllSimplePredicates = allSimplePredicates,
+            AllMain = allMainApplications,
         };
     }
 

@@ -11,7 +11,7 @@ public static class WriteApplications
         output.Write($"{typeof(TTable).Name} applications = ");
         output.WriteLine("{\n");
 
-        foreach (IApplication app in applications.All)
+        foreach (IApplication app in applications.AllMain)
         {
             output.WriteLine($"{app.Name}:");
             output.WriteLine($"{app.Sql};");

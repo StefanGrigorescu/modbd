@@ -198,6 +198,55 @@ public sealed class Conditions :
         return hash;
     }
 
+    public string ToSql() => string.Join("  &  ", Values.Select(condition => condition.Sql));
+
+    public (Conditions SimplifiedConditions, bool HadChanged) Simplify()
+    {
+        List<ConditionWithValue<int>> conditionsWithValues = Values.OfType<ConditionWithValue<int>>().ToList();
+        List<ICondition> simplifiedConditions = Values.Except(conditionsWithValues).ToList();
+        bool hadChanged = false;
+
+        for (int i = 0; i < conditionsWithValues.Count; i++)
+        {
+            ConditionWithValue<int> condition = conditionsWithValues[i];
+
+            for (int j = i + 1; j < conditionsWithValues.Count; j++)
+            {
+                ConditionWithValue<int> otherCondition = conditionsWithValues[j];
+                if(! condition.Column.Equals(otherCondition.Column))
+                {
+                    // if the columns are not equal, we can not simplify them
+                    continue;
+                }
+
+                NumberRangesReunion<int> intersection = condition.Codomain.Intersect(otherCondition.Codomain);
+                if (intersection.Equals(condition.Codomain))
+                {
+                    // condition codomain is a subset of otherCondition codomain (is stricter),
+                    // so we can remove otherCondition as it provides no extra constraints
+                    conditionsWithValues.RemoveAt(j);
+                    j--;
+                    hadChanged = true;
+                }
+                else if (intersection.Equals(otherCondition.Codomain))
+                {
+                    // otherCondition codomain is a subset of condition codomain (is stricter),
+                    // so we can remove condition as it provides no extra constraints
+                    conditionsWithValues.RemoveAt(i);
+                    i--;
+                    hadChanged = true;
+                    break;
+                }
+            }
+
+            // At this point, the condition was checked and it can not be simplified against other conditions, 
+            // so we can add it to the candidate solution
+            simplifiedConditions.Add(condition);
+        }
+
+        return (new(simplifiedConditions), hadChanged);
+    }
+
     public Conditions And(ICondition other) =>
         new([.. Values, other]);
 

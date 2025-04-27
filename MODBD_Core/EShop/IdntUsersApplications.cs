@@ -19,7 +19,8 @@ public sealed record IdntUsersApplications : EntityApplications<IdntUsers>
             //    .Where(u => u.Email.Equal(new SqlQueryParameter("p_email")))
             //    .WithFrequencyPerMonth(60_000_000)
             //    .WithSelectivity(1)
-            //    .WithName(nameof(LoginWithEmail)),
+            //    .WithName(nameof(LoginWithEmail))
+            //    .WithIsMain(),
 
             //GetDetailsAfterLoginWithEmail = eshop
             //    .IdntUsers
@@ -27,7 +28,8 @@ public sealed record IdntUsersApplications : EntityApplications<IdntUsers>
             //    .Where(u => u.Id.Equal(new SqlQueryParameter("p_id")))
             //    .WithFrequencyPerMonth(55_000_000)
             //    .WithSelectivity(1)
-            //    .WithName(nameof(GetDetailsAfterLoginWithEmail)),
+            //    .WithName(nameof(GetDetailsAfterLoginWithEmail))
+            //    .WithIsMain(),
 
             //LoginWithUsername = eshop
             //    .IdntUsers
@@ -35,7 +37,8 @@ public sealed record IdntUsersApplications : EntityApplications<IdntUsers>
             //    .Where(u => u.Username.Equal(new SqlQueryParameter("p_username")))
             //    .WithFrequencyPerMonth(500_000)
             //    .WithSelectivity(1)
-            //    .WithName(nameof(LoginWithUsername)),
+            //    .WithName(nameof(LoginWithUsername))
+            //    .WithIsMain(),
 
             //GetDetailsAfterLoginWithUsername = eshop
             //    .IdntUsers
@@ -43,19 +46,23 @@ public sealed record IdntUsersApplications : EntityApplications<IdntUsers>
             //    .Where(u => u.Id.Equal(new SqlQueryParameter("p_id")))
             //    .WithFrequencyPerMonth(483_000)
             //    .WithSelectivity(1)
-            //    .WithName(nameof(GetDetailsAfterLoginWithUsername)),
+            //    .WithName(nameof(GetDetailsAfterLoginWithUsername))
+            //    .WithIsMain(),
 
             All = [],
             AllSimplePredicates = [],
+            AllMain = [],
         };
 
         IReadOnlyList<IApplication> all = apps.GetAllApplications();
         IReadOnlyList<ICondition> allSimplePredicates = all.GetAllSimplePredicates();
+        IReadOnlyList<IApplication> allMainApplications = all.GetAllMainApplications();
 
         return apps with
         {
             All = all,
             AllSimplePredicates = allSimplePredicates,
+            AllMain = allMainApplications,
         };
     }
 

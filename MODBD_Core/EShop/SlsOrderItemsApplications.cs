@@ -21,15 +21,18 @@ public sealed record SlsOrderItemsApplications : EntityApplications<SlsOrderItem
 
             All = [],
             AllSimplePredicates = [],
+            AllMain = [],
         };
 
         IReadOnlyList<IApplication> all = apps.GetAllApplications();
         IReadOnlyList<ICondition> allSimplePredicates = all.GetAllSimplePredicates();
+        IReadOnlyList<IApplication> allMainApplications = all.GetAllMainApplications();
 
         return apps with
         {
             All = all,
             AllSimplePredicates = allSimplePredicates,
+            AllMain = allMainApplications,
         };
     }
 
