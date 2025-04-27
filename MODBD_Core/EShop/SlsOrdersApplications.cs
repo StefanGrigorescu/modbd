@@ -39,32 +39,38 @@ public sealed record SlsOrdersApplications : EntityApplications<SlsOrders>
             GetOrdersInMuntenia = selectFromSlsOrders()
                 .Where(o => o.CustomerRegionId.Equal(_idMuntenia))
                 .WithFrequencyPerMonth(30000)
-                .WithSelectivity(600_000_000),
+                .WithSelectivity(600_000_000)
+                .WithName(nameof(GetOrdersInMuntenia)),
 
             GetOrdersNotInMuntenia = selectFromSlsOrders()
                 .Where(o => o.CustomerRegionId.NotEqual(_idMuntenia))
                 .WithFrequencyPerMonth(3000)
-                .WithSelectivity(300_000_000),
+                .WithSelectivity(300_000_000)
+                .WithName(nameof(GetOrdersNotInMuntenia)),
 
             GetCompletedOrders = selectFromSlsOrders()
                 .Where(o => o.StatusId.Equal(_idCompleted))
                 .WithFrequencyPerMonth(2000)
-                .WithSelectivity(650_000_000),
+                .WithSelectivity(650_000_000)
+                .WithName(nameof(GetCompletedOrders)),
 
             GetNotCompletedOrders = selectFromSlsOrders()
                 .Where(o => o.StatusId.NotEqual(_idCompleted))
                 .WithFrequencyPerMonth(100)
-                .WithSelectivity(250_000_000),
+                .WithSelectivity(250_000_000)
+                .WithName(nameof(GetNotCompletedOrders)),
 
             GetCanceledOrders = selectFromSlsOrders()
                 .Where(o => o.StatusId.Equal(_idCanceled))
                 .WithFrequencyPerMonth(150)
-                .WithSelectivity(200_000_000),
+                .WithSelectivity(200_000_000)
+                .WithName(nameof(GetCanceledOrders)),
 
             GetNotCanceledOrders = selectFromSlsOrders()
                 .Where(o => o.StatusId.NotEqual(_idCanceled))
                 .WithFrequencyPerMonth(60)
-                .WithSelectivity(700_000_000),
+                .WithSelectivity(700_000_000)
+                .WithName(nameof(GetNotCanceledOrders)),
 
 
             GetCompletedOrdersInMuntenia = selectFromSlsOrders()
@@ -72,28 +78,32 @@ public sealed record SlsOrdersApplications : EntityApplications<SlsOrders>
                     o.StatusId.Equal(_idCompleted)
                     .And(o.CustomerRegionId.Equal(_idMuntenia))
                 ).WithFrequencyPerMonth(900)
-                .WithSelectivity(550_000_000),
+                .WithSelectivity(550_000_000)
+                .WithName(nameof(GetCompletedOrdersInMuntenia)),
 
             GetNotCompletedOrdersInMuntenia = selectFromSlsOrders()
                 .Where(o =>
                     o.StatusId.NotEqual(_idCompleted)
                     .And(o.CustomerRegionId.Equal(_idMuntenia))
                 ).WithFrequencyPerMonth(300)
-                .WithSelectivity(50_000_000),
+                .WithSelectivity(50_000_000)
+                .WithName(nameof(GetNotCompletedOrdersInMuntenia)),
 
             GetCanceledOrdersInMuntenia = selectFromSlsOrders()
                 .Where(o =>
                     o.StatusId.Equal(_idCanceled)
                     .And(o.CustomerRegionId.Equal(_idMuntenia))
                 ).WithFrequencyPerMonth(60)
-                .WithSelectivity(35_000_000),
+                .WithSelectivity(35_000_000)
+                .WithName(nameof(GetCanceledOrdersInMuntenia)),
 
             GetNotCanceledOrdersInMuntenia = selectFromSlsOrders()
                 .Where(o =>
                     o.StatusId.NotEqual(_idCanceled)
                     .And(o.CustomerRegionId.Equal(_idMuntenia))
                 ).WithFrequencyPerMonth(3)
-                .WithSelectivity(565_000_000),
+                .WithSelectivity(565_000_000)
+                .WithName(nameof(GetNotCanceledOrdersInMuntenia)),
 
 
             GetCompletedOrdersNotInMuntenia = selectFromSlsOrders()
@@ -101,28 +111,32 @@ public sealed record SlsOrdersApplications : EntityApplications<SlsOrders>
                     o.StatusId.Equal(_idCompleted)
                     .And(o.CustomerRegionId.NotEqual(_idMuntenia))
                 ).WithFrequencyPerMonth(7)
-                .WithSelectivity(235_000_000),
+                .WithSelectivity(235_000_000)
+                .WithName(nameof(GetCompletedOrdersNotInMuntenia)),
 
             GetNotCompletedOrdersNotInMuntenia = selectFromSlsOrders()
                 .Where(o =>
                     o.StatusId.NotEqual(_idCompleted)
                     .And(o.CustomerRegionId.NotEqual(_idMuntenia))
                 ).WithFrequencyPerMonth(0.5)
-                .WithSelectivity(65_000_000),
+                .WithSelectivity(65_000_000)
+                .WithName(nameof(GetNotCompletedOrdersNotInMuntenia)),
 
             GetCanceledOrdersNotInMuntenia = selectFromSlsOrders()
                 .Where(o =>
                     o.StatusId.Equal(_idCanceled)
                     .And(o.CustomerRegionId.NotEqual(_idMuntenia))
                 ).WithFrequencyPerMonth(1.5)
-                .WithSelectivity(10_000_000),
+                .WithSelectivity(10_000_000)
+                .WithName(nameof(GetCanceledOrdersNotInMuntenia)),
 
             GetNotCanceledOrdersNotInMuntenia = selectFromSlsOrders()
                 .Where(o =>
                     o.StatusId.NotEqual(_idCanceled)
                     .And(o.CustomerRegionId.NotEqual(_idMuntenia))
                 ).WithFrequencyPerMonth(0.125)
-                .WithSelectivity(225_000_000),
+                .WithSelectivity(225_000_000)
+                .WithName(nameof(GetNotCanceledOrdersNotInMuntenia)),
 
 
             All = [],

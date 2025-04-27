@@ -13,6 +13,7 @@ public static class WriteApplications
 
         foreach (IApplication app in applications.All)
         {
+            output.WriteLine($"{app.Name}:");
             output.WriteLine($"{app.Sql};");
             output.WriteLine($"frequency per month = {app.FrequencyPerMonth} | selectivity = {app.Selectivity}\n");
         }

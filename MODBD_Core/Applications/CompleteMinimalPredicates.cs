@@ -1,5 +1,7 @@
-﻿using MODBD_Core.IO;
+﻿using MODBD_Common.NumericTypes.Ranges;
+using MODBD_Core.IO;
 using MODBD_Core.Schema;
+using System.Numerics;
 
 namespace MODBD_Core.Applications;
 
@@ -66,5 +68,32 @@ public static class CompleteMinimalPredicates
         double secondFragmentRatio = secondFragment.FrequencyPerMonth / secondFragment.Selectivity;
 
         return firstFragmentRatio != secondFragmentRatio;
+    }
+}
+
+
+public static class NonSensicalCompositePredicates
+{
+    public static bool HasNoSense(this Conditions compositePredicate)
+    {
+        foreach(ICondition condition in compositePredicate.Values)
+        {
+            foreach (ICondition otherCondition in compositePredicate.Values)
+            {
+                if (condition.Equals(otherCondition))
+                {
+                    continue;
+                }
+                if (
+                    condition is ConditionWithValue<int> conditionWithValue &&
+                    otherCondition is ConditionWithValue<int> otherConditionWithValue &&
+                    ! conditionWithValue.Codomain.Intersect(otherConditionWithValue.Codomain).Any()
+                ) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 }

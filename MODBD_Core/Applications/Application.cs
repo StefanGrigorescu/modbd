@@ -1,5 +1,6 @@
 ﻿using MODBD_Common.Collections;
 using MODBD_Common.NumericTypes.Positive;
+using MODBD_Common.Text;
 using MODBD_Core.Schema;
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
@@ -8,6 +9,7 @@ namespace MODBD_Core.Applications;
 
 public interface IApplication
 {
+    TextFieldSm Name { get; }
     Positive<double> FrequencyPerMonth { get; }
     Positive<int> Selectivity { get; }
     string Sql { get; }
@@ -19,6 +21,7 @@ public interface IApplication
 public sealed record Application<TTable> : IApplication
     where TTable : Table<TTable>
 {
+    public required TextFieldSm Name { get; init; }
     public required Positive<double> FrequencyPerMonth { get; init; }
     public required Positive<int> Selectivity { get; init; }
     public required Func<TTable, IReadOnlyList<Column>> Select { get; init; }
@@ -42,6 +45,12 @@ public sealed record Application<TTable> : IApplication
     public Application<TTable> WithSelectivity(Positive<int> selectivity) =>
         this with { Selectivity = selectivity, };
 
+    public Application<TTable> WithName(string name) =>
+        WithName(TextFieldSm.From(name));
+
+    public Application<TTable> WithName(TextFieldSm name) =>
+        this with { Name = name, };
+
     public static Application<TTable> New(Func<TTable, IReadOnlyList<Column>> select, TTable table, Func<TTable, Conditions> where) =>
         new(select, table, where);
 
@@ -51,6 +60,7 @@ public sealed record Application<TTable> : IApplication
         TTable table,
         Func<TTable, Conditions> where
     ) {
+        Name = TextFieldSm.From(Guid.NewGuid().ToString());
         FrequencyPerMonth = Positive<double>.Zero;
         Selectivity = Positive<int>.Zero;
         Select = select;
@@ -80,6 +90,7 @@ public sealed record Application<TTable1, TTable2> : IApplication
     where TTable1 : Table<TTable1>
     where TTable2 : Table<TTable2>
 {
+    public required TextFieldSm Name { get; init; }
     public required Positive<double> FrequencyPerMonth { get; init; }
     public required Positive<int> Selectivity { get; init; }
     public required Func<TTable1, TTable2, IReadOnlyList<Column>> Select { get; init; }
@@ -93,6 +104,24 @@ public sealed record Application<TTable1, TTable2> : IApplication
     public required IReadOnlyList<Column> OnColumns { get; init; }
     public required IReadOnlyList<Column> AllColumns { get; init; }
     public required string Sql { get; init; }
+
+    public Application<TTable1, TTable2> WithFrequencyPerMonth(double frequencyPerMonth) =>
+        WithFrequencyPerMonth(Positive<double>.From(frequencyPerMonth));
+
+    public Application<TTable1, TTable2> WithFrequencyPerMonth(Positive<double> frequencyPerMonth) =>
+        this with { FrequencyPerMonth = frequencyPerMonth, };
+
+    public Application<TTable1, TTable2> WithSelectivity(int selectivity) =>
+        WithSelectivity(Positive<int>.From(selectivity));
+
+    public Application<TTable1, TTable2> WithSelectivity(Positive<int> selectivity) =>
+        this with { Selectivity = selectivity, };
+
+    public Application<TTable1, TTable2> WithName(string name) =>
+        WithName(TextFieldSm.From(name));
+
+    public Application<TTable1, TTable2> WithName(TextFieldSm name) =>
+        this with { Name = name, };
 
     public static Application<TTable1, TTable2> New(
         Func<TTable1, TTable2, IReadOnlyList<Column>> select,
@@ -110,7 +139,9 @@ public sealed record Application<TTable1, TTable2> : IApplication
         Func<TTable1, TTable2, Conditions> on,
         Func<TTable1, TTable2, Conditions> where
     ) {
+        Name = TextFieldSm.From(Guid.NewGuid().ToString());
         FrequencyPerMonth = Positive<double>.Zero;
+        Selectivity = Positive<int>.Zero;
         Select = select;
         Table1 = table1;
         Table2 = table2;
