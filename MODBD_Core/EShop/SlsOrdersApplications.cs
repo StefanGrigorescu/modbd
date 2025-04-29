@@ -17,11 +17,13 @@ public sealed record SlsOrdersApplications : EntityApplications<SlsOrders>
     public required Application<SlsOrders> GetNotCompletedOrdersInMuntenia { get; init; }
     public required Application<SlsOrders> GetCanceledOrdersInMuntenia { get; init; }
     public required Application<SlsOrders> GetNotCanceledOrdersInMuntenia { get; init; }
+    public required Application<SlsOrders> GetNotCompletedNotCanceledOrdersInMuntenia { get; init; }
 
     public required Application<SlsOrders> GetCompletedOrdersNotInMuntenia { get; init; }
     public required Application<SlsOrders> GetNotCompletedOrdersNotInMuntenia { get; init; }
     public required Application<SlsOrders> GetCanceledOrdersNotInMuntenia { get; init; }
     public required Application<SlsOrders> GetNotCanceledOrdersNotInMuntenia { get; init; }
+    public required Application<SlsOrders> GetNotCompletedNotCanceledOrdersNotInMuntenia { get; init; }
 
 
     private const int _idMuntenia = 0;
@@ -111,6 +113,15 @@ public sealed record SlsOrdersApplications : EntityApplications<SlsOrders>
                 .WithName(nameof(GetNotCanceledOrdersInMuntenia))
                 .WithIsMain(),
 
+            GetNotCompletedNotCanceledOrdersInMuntenia = selectFromSlsOrders()  // Pending
+                .Where(o =>
+                    o.StatusId.NotEqual(_idCompleted)
+                    .And(o.StatusId.NotEqual(_idCanceled))
+                    .And(o.CustomerRegionId.Equal(_idMuntenia))
+                ).WithFrequencyPerMonth(4)
+                .WithSelectivity(15_000_000)
+                .WithName(nameof(GetNotCanceledOrdersInMuntenia)),
+
 
             GetCompletedOrdersNotInMuntenia = selectFromSlsOrders()
                 .Where(o =>
@@ -142,6 +153,15 @@ public sealed record SlsOrdersApplications : EntityApplications<SlsOrders>
                     .And(o.CustomerRegionId.NotEqual(_idMuntenia))
                 ).WithFrequencyPerMonth(0.125)
                 .WithSelectivity(225_000_000)
+                .WithName(nameof(GetNotCanceledOrdersNotInMuntenia)),
+
+            GetNotCompletedNotCanceledOrdersNotInMuntenia = selectFromSlsOrders()   // Pending
+                .Where(o =>
+                    o.StatusId.NotEqual(_idCompleted)
+                    .And(o.StatusId.NotEqual(_idCanceled))
+                    .And(o.CustomerRegionId.NotEqual(_idMuntenia))
+                ).WithFrequencyPerMonth(0.025)
+                .WithSelectivity(55_000_000)
                 .WithName(nameof(GetNotCanceledOrdersNotInMuntenia)),
 
 
