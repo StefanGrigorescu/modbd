@@ -1,4 +1,5 @@
-﻿using MODBD_Core.IO;
+﻿using MODBD_Core.Applications.SqlConditions;
+using MODBD_Core.IO;
 using MODBD_Core.Schema;
 
 namespace MODBD_Core.Applications;
@@ -72,11 +73,11 @@ public static class CompleteMinimalPredicates
     {
         output.WriteLine($"\nChecking relevance of {simplePredicate.Sql}");
 
-        IApplication firstFragment = apps.SingleByWhereConditions(
+        IApplication firstFragment = apps.FindByWhereConditions(
             completeMinimalSimplePredicates.And(simplePredicate),
             output
         );
-        IApplication secondFragment = apps.SingleByWhereConditions(
+        IApplication secondFragment = apps.FindByWhereConditions(
             completeMinimalSimplePredicates.And(simplePredicate.Not()),
             output
         );

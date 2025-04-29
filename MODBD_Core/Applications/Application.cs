@@ -1,6 +1,7 @@
 ﻿using MODBD_Common.Collections;
 using MODBD_Common.NumericTypes.Positive;
 using MODBD_Common.Text;
+using MODBD_Core.Applications.SqlConditions;
 using MODBD_Core.Schema;
 using System.Diagnostics.CodeAnalysis;
 using System.Text;

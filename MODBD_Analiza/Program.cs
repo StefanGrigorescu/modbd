@@ -1,4 +1,5 @@
 ﻿using MODBD_Core.Applications;
+using MODBD_Core.Applications.SqlConditions;
 using MODBD_Core.EShop;
 using MODBD_Core.IO;
 

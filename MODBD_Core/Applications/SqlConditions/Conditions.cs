@@ -1,161 +1,10 @@
 ﻿using MODBD_Common.Collections;
 using MODBD_Common.NumericTypes.Ranges;
+using MODBD_Core.Applications;
 using MODBD_Core.Schema;
-using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 
-namespace MODBD_Core.Applications;
-
-// TODO: Implement ConditionWithSqlParameter
-
-
-[DebuggerDisplay("{Column} {Operator} {Value}")]
-public sealed record ConditionWithValue<TSqlValue> : ICondition
-    where TSqlValue : struct, IComparable<TSqlValue>, IEquatable<TSqlValue>, INumber<TSqlValue>, IMinMaxValue<TSqlValue>
-{
-    public required Column Column { get; init; }
-    public required Operator Operator { get; init; }
-    public required SqlValue<TSqlValue> Value { get; init; }
-
-    public required IReadOnlyList<Column> Columns { get; init; }
-    public required string Sql { get; init; }
-    public required NumberRangesReunion<TSqlValue> Codomain { get; init; } = NumberRangesReunion<TSqlValue>.NullNumberSet;
-
-    public ICondition Not() =>
-        new ConditionWithValue<TSqlValue>(Column, Operator.Not(Operator), Value);
-
-    public static Conditions NewList(Column column, Operator @operator, SqlValue<TSqlValue> value) =>
-        new([new ConditionWithValue<TSqlValue>(column, @operator, value)]);
-
-    public IReadOnlyList<ICondition> And(ICondition other) =>
-        [this, other];
-
-    public bool Equals(ICondition? other) => 
-        other is not null &&
-        other is ConditionWithValue<TSqlValue> otherCondition &&
-        Column.Equals(otherCondition.Column) &&
-        Operator.Equals(otherCondition.Operator) &&
-        Value.Equals(otherCondition.Value);
-
-    public override int GetHashCode() =>
-        HashCode.Combine(Column, Operator, Value);
-
-    [SetsRequiredMembers]
-    private ConditionWithValue(
-        Column column,
-        Operator @operator,
-        SqlValue<TSqlValue> value
-    ) {
-        Column = column;
-        Operator = @operator;
-        Value = value;
-        Codomain = ConditionCodomain.From(@operator, value);
-
-        Columns = [Column];
-        Sql = $"{Column.ToSql()} {Operator.Name} {Value}";
-    }
-}
-
-public static class ConditionCodomain
-{
-    public static NumberRangesReunion<TSqlValue> From<TSqlValue>(
-        Operator @operator,
-        SqlValue<TSqlValue> value
-    )
-        where TSqlValue : struct, IComparable<TSqlValue>, IEquatable<TSqlValue>, INumber<TSqlValue>, IMinMaxValue<TSqlValue>
-     => @operator.Match<NumberRangesReunion<TSqlValue>>(new()
-     {
-         LessThan = _ => NumberRange<TSqlValue>.From(
-             MinusInfinity<TSqlValue>.Instance,
-             UpperBound<TSqlValue>.Exclusive.From(value)
-         ).AsReunion(),
-
-         LessThanOrEqual = _ => NumberRange<TSqlValue>.From(
-             MinusInfinity<TSqlValue>.Instance,
-             UpperBound<TSqlValue>.Inclusive.From(value)
-         ).AsReunion(),
-
-         GreaterThan = _ => NumberRange<TSqlValue>.From(
-             LowerBound<TSqlValue>.Exclusive.From(value),
-             Infinity<TSqlValue>.Instance
-         ).AsReunion(),
-
-         GreaterThanOrEqual = _ => NumberRange<TSqlValue>.From(
-             LowerBound<TSqlValue>.Inclusive.From(value),
-             Infinity<TSqlValue>.Instance
-         ).AsReunion(),
-
-         Equal = _ => NumberRange<TSqlValue>.From(
-             LowerBound<TSqlValue>.Inclusive.From(value),
-             UpperBound<TSqlValue>.Inclusive.From(value)
-         ).AsReunion(),
-
-         NotEqual = _ => NumberRangesReunion<TSqlValue>.From([
-             NumberRange<TSqlValue>.From(
-                 MinusInfinity<TSqlValue>.Instance,
-                 UpperBound<TSqlValue>.Exclusive.From(value)
-             ),
-             NumberRange<TSqlValue>.From(
-                 LowerBound<TSqlValue>.Exclusive.From(value),
-                 Infinity<TSqlValue>.Instance
-             )
-         ]),
-     });
-}
-
-
-[DebuggerDisplay("{Column1} {Operator} {Column2}")]
-public sealed record ConditionWithOtherColumn : ICondition
-{
-    public required Column Column1 { get; init; }
-    public required Operator Operator { get; init; }
-    public required Column Column2 { get; init; }
-
-    public required IReadOnlyList<Column> Columns { get; init; }
-    public required string Sql { get; init; }
-
-    public ICondition Not() =>
-        new ConditionWithOtherColumn(Column1, Operator.Not(Operator), Column2);
-
-    public static Conditions NewList(Column column1, Operator @operator, Column column2) =>
-        new([new ConditionWithOtherColumn(column1, @operator, column2)]);
-
-    public IReadOnlyList<ICondition> And(ICondition other) =>
-        [this, other];
-
-    public bool Equals(ICondition? other) =>
-        other is not null &&
-        other is ConditionWithOtherColumn otherCondition &&
-        Column1.Equals(otherCondition.Column1) &&
-        Operator.Equals(otherCondition.Operator) &&
-        Column2.Equals(otherCondition.Column2);
-
-    public override int GetHashCode() =>
-        HashCode.Combine(Column1, Operator, Column2);
-
-    [SetsRequiredMembers] private ConditionWithOtherColumn(
-        Column column1,
-        Operator @operator,
-        Column column2
-    ) {
-        Column1 = column1;
-        Operator = @operator;
-        Column2 = column2;
-
-        Columns = [Column1, Column2];
-        Sql = $"{Column1.ToSql()} {Operator.Name} {Column2.ToSql()}";
-    }
-}
-
-
-public interface ICondition : IEquatable<ICondition>
-{
-    IReadOnlyList<Column> Columns { get; }
-    string Sql { get; }
-    ICondition Not();
-}
-
+namespace MODBD_Core.Applications.SqlConditions;
 
 public sealed class Conditions :
     SortedList<int, ICondition>,
@@ -177,7 +26,7 @@ public sealed class Conditions :
             return false;
         }
 
-        return !this.Any((KeyValuePair<int, ICondition> kvp) =>                         // any key 
+        return !this.Any((kvp) =>                         // any key 
             !other.TryGetValue(kvp.Key, out ICondition? otherCondition) ||      // not found in other dictionary
                 !kvp.Value.Equals(otherCondition)                                               // or with different value
         );
@@ -204,14 +53,26 @@ public sealed class Conditions :
     {
         List<ConditionWithValue<int>> conditionsWithValues = Values.OfType<ConditionWithValue<int>>().ToList();
         List<ICondition> simplifiedConditions = Values.Except(conditionsWithValues).ToList();
-        bool hadChanged = false;
+
+        // Use a HashSet to track indices of conditions that should be removed
+        HashSet<int> indicesToRemove = new();
 
         for (int i = 0; i < conditionsWithValues.Count; i++)
         {
+            if (indicesToRemove.Contains(i))
+            {
+                continue;
+            }
+
             ConditionWithValue<int> condition = conditionsWithValues[i];
 
             for (int j = i + 1; j < conditionsWithValues.Count; j++)
             {
+                if (indicesToRemove.Contains(j)) 
+                { 
+                    continue; 
+                }
+
                 ConditionWithValue<int> otherCondition = conditionsWithValues[j];
                 if(! condition.Column.Equals(otherCondition.Column))
                 {
@@ -224,17 +85,13 @@ public sealed class Conditions :
                 {
                     // condition codomain is a subset of otherCondition codomain (is stricter),
                     // so we can remove otherCondition as it provides no extra constraints
-                    conditionsWithValues.RemoveAt(j);
-                    j--;
-                    hadChanged = true;
+                    indicesToRemove.Add(j);
                 }
                 else if (intersection.Equals(otherCondition.Codomain))
                 {
                     // otherCondition codomain is a subset of condition codomain (is stricter),
                     // so we can remove condition as it provides no extra constraints
-                    conditionsWithValues.RemoveAt(i);
-                    i--;
-                    hadChanged = true;
+                    indicesToRemove.Add(i);
                     break;
                 }
             }
@@ -244,7 +101,12 @@ public sealed class Conditions :
             simplifiedConditions.Add(condition);
         }
 
-        return (new(simplifiedConditions), hadChanged);
+        IEnumerable<ConditionWithValue<int>> conditionsToKeep = conditionsWithValues.Where((ConditionWithValue<int> _, int idx) =>
+            ! indicesToRemove.Contains(idx)
+        );
+        simplifiedConditions.AddRange(conditionsToKeep);
+
+        return (new(simplifiedConditions), indicesToRemove.Count != 0);
     }
 
     public Conditions And(ICondition other) =>
