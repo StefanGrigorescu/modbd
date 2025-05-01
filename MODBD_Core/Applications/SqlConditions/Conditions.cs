@@ -47,7 +47,8 @@ public sealed class Conditions :
         return hash;
     }
 
-    public string ToSql() => string.Join("  &  ", Values.Select(condition => condition.Sql));
+    public string ToSql() => 
+        string.Join("  &  ", Values.Select(condition => condition.Sql));
 
     public (Conditions SimplifiedConditions, bool HadChanged) Simplify()
     {
@@ -55,7 +56,7 @@ public sealed class Conditions :
         List<ICondition> simplifiedConditions = Values.Except(conditionsWithValues).ToList();
 
         // Use a HashSet to track indices of conditions that should be removed
-        HashSet<int> indicesToRemove = new();
+        HashSet<int> indicesToRemove = [];
 
         for (int i = 0; i < conditionsWithValues.Count; i++)
         {
@@ -95,10 +96,6 @@ public sealed class Conditions :
                     break;
                 }
             }
-
-            // At this point, the condition was checked and it can not be simplified against other conditions, 
-            // so we can add it to the candidate solution
-            simplifiedConditions.Add(condition);
         }
 
         IEnumerable<ConditionWithValue<int>> conditionsToKeep = conditionsWithValues.Where((ConditionWithValue<int> _, int idx) =>
@@ -107,6 +104,41 @@ public sealed class Conditions :
         simplifiedConditions.AddRange(conditionsToKeep);
 
         return (new(simplifiedConditions), indicesToRemove.Count != 0);
+    }
+
+    public static IReadOnlyList<Conditions> CompositePredicatesFromSimplePredicates(IReadOnlyList<ICondition> simplePredicates)
+    {
+        int n = simplePredicates.Count;
+        if (n == 0)
+        {
+            return [];
+        }
+
+        List<Conditions> compositePredicates = [];
+
+        // Generate all combinations using a bitmask
+        int totalCombinations = 1 << n; // 2^n combinations
+        for (int mask = 0; mask < totalCombinations; mask++)
+        {
+            List<ICondition> currentCombination = [];
+
+            for (int i = 0; i < n; i++)
+            {
+                // Check if the i-th bit in the mask is set
+                bool isNegated = (mask & (1 << i)) != 0;
+
+                // Add either pi or not(pi) based on the bit
+                ICondition predicate = isNegated ? 
+                    simplePredicates[i].Not() : 
+                    simplePredicates[i];
+                currentCombination.Add(predicate);
+            }
+
+            // Create a composite condition from the current combination
+            compositePredicates.Add(new Conditions(currentCombination));
+        }
+
+        return compositePredicates;
     }
 
     public Conditions And(ICondition other) =>

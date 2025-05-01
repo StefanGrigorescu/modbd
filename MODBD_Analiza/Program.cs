@@ -26,7 +26,7 @@ Conditions completeMinimalPredicates = CompleteMinimalPredicates.Of(ordersApplic
 output.WriteLine("Complete minimal predicates of orders: {");
 foreach (ICondition condition in completeMinimalPredicates.Values)
 {
-    output.WriteLine(condition.Sql);
+    output.WriteLine($"\t{condition.Sql}");
 }
 output.WriteLine("}\n");
 
