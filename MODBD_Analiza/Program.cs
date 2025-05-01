@@ -23,12 +23,25 @@ output.WriteSimplePredicatesOf(ordersApplications);
 output.WriteSimplePredicatesOf(orderItemsApplications);
 
 IReadOnlyList<Conditions> ordersHorizontalShards = PrimaryHorizontalSharding.Of(ordersApplications, output);
-output.Write($"Horizontal shards of {typeof(SlsOrders).Name}: ");
+string slsOrdersTableName = typeof(SlsOrders).Name;
+output.Write($"Horizontal shards of {slsOrdersTableName}: ");
 output.WriteLine("{");
-foreach (Conditions ordersHorizontalShard in ordersHorizontalShards)
+for (int i = 0; i < ordersHorizontalShards.Count; i++)
 {
-    output.WriteLine($"\t{ordersHorizontalShard.ToSql()}");
+    Conditions ordersHorizontalShard = ordersHorizontalShards[i];
+    output.WriteLine($"\t{slsOrdersTableName}{i} =  {ordersHorizontalShard.ToSql()}");
 }
 output.WriteLine("}\n");
+
+string slsOrderItemsTableName = typeof(SlsOrderItems).Name;
+output.Write($"Horizontal shards of {slsOrderItemsTableName}: ");
+output.WriteLine("{");
+for (int i = 0; i < ordersHorizontalShards.Count; i++)
+{
+    output.WriteLine($"\t{slsOrderItemsTableName}{i} =  {slsOrderItemsTableName} of {slsOrdersTableName}{i}");
+}
+output.WriteLine("}\n");
+
+
 
 output.WriteLine("Finished running program.");
