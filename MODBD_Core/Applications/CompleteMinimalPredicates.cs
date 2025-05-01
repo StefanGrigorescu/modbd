@@ -1,4 +1,5 @@
-﻿using MODBD_Core.Applications.SqlConditions;
+﻿using MODBD_Common.Abstractions.Responses;
+using MODBD_Core.Applications.SqlConditions;
 using MODBD_Core.IO;
 using MODBD_Core.Schema;
 
@@ -158,14 +159,23 @@ public static class CompleteMinimalPredicates
     )
         where TTable : Table<TTable>
     {
-        IApplication firstFragment = apps.FindByWhereConditions(
+        AppResponse<IApplication> firstFragmentResponse = apps.FindByWhereConditions(
             completeMinimalSimplePredicates.And(simplePredicate),
             output
         );
-        IApplication secondFragment = apps.FindByWhereConditions(
+        if( ! firstFragmentResponse.TryGetData(out IApplication? firstFragment))
+        {
+            return false;
+        }
+
+        AppResponse<IApplication> secondFragmentResponse = apps.FindByWhereConditions(
             completeMinimalSimplePredicates.And(simplePredicate.Not()),
             output
         );
+        if ( ! secondFragmentResponse.TryGetData(out IApplication? secondFragment))
+        {
+            return false;
+        }
 
         double firstFragmentRatio = firstFragment.FrequencyPerMonth / (firstFragment.Selectivity + 1);
         double secondFragmentRatio = secondFragment.FrequencyPerMonth / (secondFragment.Selectivity + 1);

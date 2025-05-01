@@ -2,6 +2,7 @@
 using MODBD_Common.Collections;
 using MODBD_Core.IO;
 using MODBD_Core.Applications.SqlConditions;
+using MODBD_Common.Abstractions.Responses;
 
 namespace MODBD_Core.Applications;
 
@@ -12,15 +13,16 @@ public abstract record EntityApplications<TTable>
     public required IReadOnlyList<IApplication> AllMain { get; init; }
     public required IReadOnlyList<ICondition> AllSimplePredicates { get; init; }
 
-    public IApplication FindByWhereConditions(
+    public AppResponse<IApplication> FindByWhereConditions(
         Conditions conditions,
         IOutput output
     ) {
         bool hasNoSense = CompositePredicate.HasNoSense(conditions);
         if(hasNoSense)
         {
-            output.WriteLine($"Composite predicate  {conditions.ToSql()}  has no sense. Using 'none' application.");
-            return NoneApplication.On(typeof(TTable).Name, conditions);
+            string message = $"Composite predicate  {conditions.ToSql()}  has no sense. No application could use it.";
+            output.WriteLine(message);
+            return AppResponse<IApplication>.Failed(message);
         }
 
         (Conditions simplifiedConditions, bool hadChanged) = conditions.Simplify();
@@ -36,10 +38,10 @@ public abstract record EntityApplications<TTable>
         if(app is null)
         {
             output.WriteLine($"No application uses the composite predicate  {conditions.ToSql()} . Using 'none' application.");
-            return NoneApplication.On(typeof(TTable).Name, conditions);
+            return AppResponse<IApplication>.Succeeded(NoneApplication.On(typeof(TTable).Name, conditions));
         }
 
-        return app;
+        return AppResponse<IApplication>.Succeeded(app);
     }
 }
 
