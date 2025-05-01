@@ -22,11 +22,12 @@ output.WriteSimplePredicatesOf(usersApplications);
 output.WriteSimplePredicatesOf(ordersApplications);
 output.WriteSimplePredicatesOf(orderItemsApplications);
 
-Conditions completeMinimalPredicates = CompleteMinimalPredicates.Of(ordersApplications, output);
-output.WriteLine("Complete minimal predicates of orders: {");
-foreach (ICondition condition in completeMinimalPredicates.Values)
+IReadOnlyList<Conditions> ordersHorizontalShards = PrimaryHorizontalSharding.Of(ordersApplications, output);
+output.Write($"Horizontal shards of {typeof(SlsOrders).Name}: ");
+output.WriteLine("{");
+foreach (Conditions ordersHorizontalShard in ordersHorizontalShards)
 {
-    output.WriteLine($"\t{condition.Sql}");
+    output.WriteLine($"\t{ordersHorizontalShard.ToSql()}");
 }
 output.WriteLine("}\n");
 

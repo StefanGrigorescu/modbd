@@ -1,4 +1,5 @@
 ﻿using MODBD_Common.Abstractions.Responses;
+using MODBD_Common.Collections;
 using MODBD_Core.Applications.SqlConditions;
 using MODBD_Core.IO;
 using MODBD_Core.Schema;
@@ -7,7 +8,7 @@ namespace MODBD_Core.Applications;
 
 public static class CompleteMinimalPredicates
 {
-    public static Conditions Of<TTable>(
+    public static IReadOnlyList<ICondition> Of<TTable>(
         EntityApplications<TTable> apps,
         IOutput output
     )
@@ -113,7 +114,8 @@ public static class CompleteMinimalPredicates
             }
         }
 
-        return new(completeMinimalSimplePredicates);
+        output.WriteLine("");
+        return completeMinimalSimplePredicates.ToIReadOnlyList();
     }
 
     public static bool IsSimplePredicateNotRelevantAnymore<TTable>(
