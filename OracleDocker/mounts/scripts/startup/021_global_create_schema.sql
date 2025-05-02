@@ -1,7 +1,7 @@
 SET SERVEROUTPUT ON;
 
 -- Switch to GLOBAL PDB
-ALTER SESSION SET CONTAINER = ESHOP_GLOBAL;
+ALTER SESSION SET CONTAINER = eshop_global;
 
 -- Check if user eshop_global_user exists
 DECLARE
@@ -10,12 +10,12 @@ BEGIN
     SELECT COUNT(*)
     INTO user_exists
     FROM dba_users
-    WHERE username = 'eshop_global_user';
+    WHERE username = 'ESHOP_GLOBAL_USER';
 
     IF user_exists = 0 THEN
         -- Create GLOBAL schema
         EXECUTE IMMEDIATE '
-            CREATE USER eshop_global_user IDENTIFIED BY GlobalUserPassword123!
+            CREATE USER eshop_global_user IDENTIFIED BY "GlobalUserPassword123!"
             ACCOUNT UNLOCK
         ';
         DBMS_OUTPUT.PUT_LINE('global_create_schema: User eshop_global_user was successfully created.');
@@ -62,7 +62,6 @@ BEGIN
     EXECUTE IMMEDIATE 'GRANT SELECT ANY DICTIONARY TO ESHOP_GLOBAL_SYS';
     EXECUTE IMMEDIATE 'GRANT CREATE PUBLIC DATABASE LINK TO ESHOP_GLOBAL_SYS';
     EXECUTE IMMEDIATE 'GRANT CREATE PUBLIC SYNONYM TO ESHOP_GLOBAL_SYS';
-    EXECUTE IMMEDIATE 'GRANT UNLIMITED TABLESPACE TO ESHOP_GLOBAL_SYS';
 END;
 /
 
