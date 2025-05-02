@@ -97,7 +97,7 @@ public sealed record HourFormat12 : IHour, IComparable<HourFormat12>
     public string ToShortString() => 
         HourFormat24.From(this).ToShortString();
 
-    private static readonly NumberRange<int> _range = NumberRange<int>.From(1, 12);
+    private static readonly NumberRange<int> _range = NumberRange<int>.FromFiniteInclusive(1, 12);
 
     public static HourFormat12 From(IHour hour) => hour switch
     {

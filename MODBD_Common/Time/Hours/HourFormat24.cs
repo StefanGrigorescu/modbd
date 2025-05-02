@@ -57,8 +57,8 @@ public sealed record HourFormat24 : IHour, IComparable<HourFormat24>
 
     public string ToShortString() => $"{Value:00}";
 
-    private static readonly NumberRange<int> _range = NumberRange<int>.From(0, 23);
-    private static readonly int _exclusiveUpperBound = _range.UpperBound + 1;
+    private static readonly NumberRange<int> _range = NumberRange<int>.FromFiniteInclusive(0, 23);
+    private static readonly int _exclusiveUpperBound = 24;
 
     public static HourFormat24 From(IHour hour) => hour switch
     {

@@ -1,11 +1,11 @@
 ﻿using MODBD_Core.Applications;
 using MODBD_Core.Schema;
 
-namespace MODBD_Analiza.IO;
+namespace MODBD_Core.IO;
 
-internal static class WriteSimplePredicates
+public static class WriteSimplePredicates
 {
-    public static void WriteSimplePredicatesOf<TTable>(this Output output, EntityApplications<TTable> applications)
+    public static void WriteSimplePredicatesOf<TTable>(this IOutput output, EntityApplications<TTable> applications)
         where TTable : Table<TTable>
     {
         output.Write($"Simple predicates of {typeof(TTable).Name} = ");
