@@ -114,7 +114,7 @@ public static class CompleteMinimalPredicates
             }
         }
 
-        output.WriteLine("");
+        output.WriteLine();
         return completeMinimalSimplePredicates.ToIReadOnlyList();
     }
 

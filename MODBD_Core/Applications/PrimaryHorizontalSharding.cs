@@ -13,8 +13,10 @@ public static class PrimaryHorizontalSharding
     )
         where TTable : Table<TTable>
     {
+        string tableName = typeof(TTable).Name;
+
         IReadOnlyList<ICondition> completeMinimalPredicates = CompleteMinimalPredicates.Of(apps, output);
-        output.Write($"Complete minimal predicates of {typeof(TTable).Name}: ");
+        output.Write($"Complete minimal predicates of {tableName}: ");
         output.WriteLine("{");
         foreach (ICondition condition in completeMinimalPredicates)
         {
@@ -33,6 +35,32 @@ public static class PrimaryHorizontalSharding
 
         output.WriteLine("Checking if any composite predicate has no sense.\n");
 
+        compositePredicates = RemoveCompositePredicatesWithNoSense(compositePredicates, output);
+
+        output.Write($"Composite predicates of {tableName}: ");
+        output.WriteLine("{");
+        for (int i = 0; i < compositePredicates.Count; i++)
+        {
+            output.WriteLine($"\tm{i} =  {compositePredicates[i].ToSql()}");
+        }
+        output.WriteLine("}\n");
+
+        output.WriteLine("Simplifying composite predicates.\n");
+        compositePredicates = SimplifyCompositePredicates(compositePredicates, output);
+        output.WriteLine("Simplified composite predicates: {");
+        for (int i = 0; i < compositePredicates.Count; i++)
+        {
+            output.WriteLine($"\tm{i} =  {compositePredicates[i].ToSql()}");
+        }
+        output.WriteLine("}\n");
+
+        return compositePredicates;
+    }
+
+    private static IReadOnlyList<Conditions> RemoveCompositePredicatesWithNoSense(
+        IReadOnlyList<Conditions> compositePredicates,
+        IOutput output
+    ) {
         HashSet<int> removedIndexes = [];
         for (int i = 0; i < compositePredicates.Count; i++)
         {
@@ -46,18 +74,57 @@ public static class PrimaryHorizontalSharding
             }
         }
 
-        if(removedIndexes.Count == 0)
+        if (removedIndexes.Count == 0)
         {
             output.WriteLine("No composite predicate had no sense.\n");
-        } 
-        else
-        {
-            output.WriteLine("Removing composite predicates with no sense.\n");
+            return compositePredicates;
         }
 
+        output.WriteLine("Removing composite predicates with no sense.\n");
         return compositePredicates
-            .Where((Conditions _, int idx) => 
-                ! removedIndexes.Contains(idx)
+            .Where((Conditions _, int idx) =>
+                !removedIndexes.Contains(idx)
             ).ToIReadOnlyList();
+    }
+
+    private static IReadOnlyList<Conditions> SimplifyCompositePredicates(
+        IReadOnlyList<Conditions> compositePredicates,
+        IOutput output
+    ) {
+        (Conditions SimplifiedConditions, bool HadChanged)[] simplifyResponse = compositePredicates
+            .Select((Conditions compositePredicate) =>
+            {
+                (Conditions SimplifiedConditions, bool HadChanged) simplifiedCompositePredicate = compositePredicate.Simplify();
+                if (simplifiedCompositePredicate.HadChanged)
+                {
+                    output.WriteLine($"Composite predicate  {compositePredicate.ToSql()}  is equivalent to the simplified predicate  {simplifiedCompositePredicate.SimplifiedConditions.ToSql()} .");
+                }
+                return simplifiedCompositePredicate;
+            }).ToArray();
+
+        bool wasAnySimplified = simplifyResponse.Any(t => t.HadChanged);
+        if ( ! wasAnySimplified)
+        {
+            output.WriteLine("All composite predicate were already as simple as possible.\n");
+            return simplifyResponse.ToIReadOnlyList(t => t.SimplifiedConditions);
+        }
+
+        // Removing duplicates from simplified composite predicates, if any
+        List<Conditions> simplifiedCompositePredicates = [];
+        foreach ((Conditions simplifiedCompositePredicate, bool hadChanged) in simplifyResponse)
+        {
+            if (!simplifiedCompositePredicates.Contains(simplifiedCompositePredicate))
+            {
+                simplifiedCompositePredicates.Add(simplifiedCompositePredicate);
+            }
+        }
+        if (simplifyResponse.Length != simplifiedCompositePredicates.Count)
+        {
+            output.WriteLine("Removing duplicates from simplified composite predicates.\n");
+            return simplifiedCompositePredicates.ToIReadOnlyList();
+        }
+
+        output.WriteLine();
+        return simplifiedCompositePredicates.ToIReadOnlyList();
     }
 }

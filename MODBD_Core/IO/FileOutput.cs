@@ -3,6 +3,7 @@
 public interface IOutput
 {
     void WriteLine(string message);
+    void WriteLine();
     void Write(string message);
 }
 
@@ -14,6 +15,9 @@ public sealed class FileOutput : IOutput, IDisposable
 
     public void WriteLine(string message) =>
         _writer.WriteLine(message);
+
+    public void WriteLine() =>
+        _writer.WriteLine();
 
     public void Write(string message) =>
         _writer.Write(message);
@@ -35,6 +39,9 @@ public sealed class ConsoleOutput : IOutput
 {
     public void WriteLine(string message) =>
         Console.WriteLine(message);
+
+    public void WriteLine() =>
+        Console.WriteLine();
 
     public void Write(string message) =>
         Console.Write(message);
