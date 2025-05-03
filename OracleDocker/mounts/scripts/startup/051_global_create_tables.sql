@@ -6,9 +6,6 @@ ALTER SESSION SET CONTAINER = eshop_global;
 -- Set the schema to the desired user
 ALTER SESSION SET CURRENT_SCHEMA = ESHOP_GLOBAL_USER;
 
--- Dynamically include the audit setup script using the PROJECT_PATH environment variable
-@&PROJECT_PATH\OracleDocker\mounts\scripts\startup\04_audit_setup.sql
-
 CREATE OR REPLACE PROCEDURE TRY_CREATE_TABLE (
     tbl_name IN VARCHAR2,
     cols_and_constraints_csv IN VARCHAR2,
