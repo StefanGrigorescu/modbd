@@ -45,8 +45,8 @@ CREATE OR REPLACE PROCEDURE INSERT_REGION_AND_CITIES (
     region_exists_by_name NUMBER := 0;
 BEGIN
     SELECT 
-        COUNT(CASE WHEN id = p_region_id THEN 1 END) INTO region_exists_by_id,
-        COUNT(CASE WHEN UPPER(name) = UPPER(p_region_name) THEN 1 END) INTO region_exists_by_name
+        COUNT(CASE WHEN id = p_region_id THEN 1 END), COUNT(CASE WHEN UPPER(name) = UPPER(p_region_name) THEN 1 END) 
+        INTO region_exists_by_id, region_exists_by_name
     FROM IDNT_REGIONS;
 
     -- Ensure both ID and name are unique
@@ -100,8 +100,8 @@ CREATE OR REPLACE PROCEDURE INSERT_ROLE (
 BEGIN
     -- Check if the role ID or name already exists
     SELECT 
-        COUNT(CASE WHEN id = p_role_id THEN 1 END) INTO role_exists_by_id,
-        COUNT(CASE WHEN UPPER(name) = UPPER(p_role_name) THEN 1 END) INTO role_exists_by_name
+        COUNT(CASE WHEN id = p_role_id THEN 1 END), COUNT(CASE WHEN UPPER(name) = UPPER(p_role_name) THEN 1 END) 
+        INTO role_exists_by_id, role_exists_by_name
     FROM IDNT_ROLES;
 
     -- Ensure both ID and name are unique
@@ -941,8 +941,8 @@ CREATE OR REPLACE PROCEDURE INSERT_CATEGORY_AND_SUBCATEGORIES (
 BEGIN
     -- Check if the category ID or name already exists
     SELECT 
-        COUNT(CASE WHEN id = p_category_id THEN 1 END) INTO category_exists_by_id,
-        COUNT(CASE WHEN UPPER(name) = UPPER(p_category_name) THEN 1 END) INTO category_exists_by_name
+        COUNT(CASE WHEN id = p_category_id THEN 1 END), COUNT(CASE WHEN UPPER(name) = UPPER(p_category_name) THEN 1 END) 
+        INTO category_exists_by_id, category_exists_by_name
     FROM SLS_PRODUCT_CATEGORIES;
 
     -- Ensure both ID and name are unique
@@ -1403,8 +1403,8 @@ CREATE OR REPLACE PROCEDURE INSERT_DISCOUNT_TYPE (
 BEGIN
     -- Check if the discount type ID or name already exists
     SELECT 
-        COUNT(CASE WHEN id = p_discount_type_id THEN 1 END) INTO discount_type_exists_by_id,
-        COUNT(CASE WHEN UPPER(name) = UPPER(p_discount_type_name) THEN 1 END) INTO discount_type_exists_by_name
+        COUNT(CASE WHEN id = p_discount_type_id THEN 1 END), COUNT(CASE WHEN UPPER(name) = UPPER(p_discount_type_name) THEN 1 END) 
+        INTO discount_type_exists_by_id, discount_type_exists_by_name
     FROM SLS_DISCOUNT_TYPES;
 
     -- Ensure both ID and name are unique
@@ -1443,8 +1443,8 @@ CREATE OR REPLACE PROCEDURE INSERT_DISCOUNT_REASON (
 BEGIN
     -- Check if the discount reason ID or name already exists
     SELECT 
-        COUNT(CASE WHEN id = p_discount_reason_id THEN 1 END) INTO discount_reason_exists_by_id,
-        COUNT(CASE WHEN UPPER(name) = UPPER(p_discount_reason_name) THEN 1 END) INTO discount_reason_exists_by_name
+        COUNT(CASE WHEN id = p_discount_reason_id THEN 1 END), COUNT(CASE WHEN UPPER(name) = UPPER(p_discount_reason_name) THEN 1 END) 
+        INTO discount_reason_exists_by_id, discount_reason_exists_by_name
     FROM SLS_DISCOUNT_REASONS;
 
     -- Ensure both ID and name are unique
@@ -1489,8 +1489,8 @@ CREATE OR REPLACE PROCEDURE INSERT_ORDER_STATUS (
 BEGIN
     -- Check if the order status ID or name already exists
     SELECT 
-        COUNT(CASE WHEN id = p_status_id THEN 1 END) INTO status_exists_by_id,
-        COUNT(CASE WHEN UPPER(name) = UPPER(p_status_name) THEN 1 END) INTO status_exists_by_name
+        COUNT(CASE WHEN id = p_status_id THEN 1 END), COUNT(CASE WHEN UPPER(name) = UPPER(p_status_name) THEN 1 END) 
+        INTO status_exists_by_id, status_exists_by_name
     FROM SLS_ORDER_STATUSES;
 
     -- Ensure both ID and name are unique
@@ -1530,8 +1530,8 @@ CREATE OR REPLACE PROCEDURE INSERT_INVOICE_STATUS (
 BEGIN
     -- Check if the invoice status ID or name already exists
     SELECT 
-        COUNT(CASE WHEN id = p_status_id THEN 1 END) INTO status_exists_by_id,
-        COUNT(CASE WHEN UPPER(name) = UPPER(p_status_name) THEN 1 END) INTO status_exists_by_name
+        COUNT(CASE WHEN id = p_status_id THEN 1 END), COUNT(CASE WHEN UPPER(name) = UPPER(p_status_name) THEN 1 END) 
+        INTO status_exists_by_id, status_exists_by_name
     FROM BLG_INVOICE_STATUSES;
 
     -- Ensure both ID and name are unique
