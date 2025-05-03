@@ -48,7 +48,7 @@ END;
 BEGIN
     -- Check and create IDNT_Regions table
     TRY_CREATE_TABLE('IDNT_REGIONS', ' 
-        id NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+        id NUMBER PRIMARY KEY,
         name NVARCHAR2(150) UNIQUE NOT NULL,
         created_on DATE DEFAULT SYSDATE NOT NULL,
         last_updated_on DATE DEFAULT NULL
@@ -66,7 +66,7 @@ BEGIN
 
     -- Check and create IDNT_Roles table
     TRY_CREATE_TABLE('IDNT_ROLES', ' 
-        id NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+        id NUMBER PRIMARY KEY,
         name VARCHAR2(25) UNIQUE NOT NULL,
         created_on DATE DEFAULT SYSDATE NOT NULL,
         last_updated_on DATE DEFAULT NULL
@@ -172,7 +172,7 @@ BEGIN
 
     -- Check and create SLS_Product_Categories table
     TRY_CREATE_TABLE('SLS_PRODUCT_CATEGORIES', ' 
-        id NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+        id NUMBER PRIMARY KEY,
         name NVARCHAR2(150) UNIQUE NOT NULL,
         created_on DATE DEFAULT SYSDATE NOT NULL,
         last_updated_on DATE DEFAULT NULL
@@ -218,7 +218,7 @@ BEGIN
 
     -- Check and create SLS_Discount_Types table
     TRY_CREATE_TABLE('SLS_DISCOUNT_TYPES', ' 
-        id NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+        id NUMBER PRIMARY KEY,
         name VARCHAR2(25) UNIQUE NOT NULL,
         created_on DATE DEFAULT SYSDATE NOT NULL,
         last_updated_on DATE DEFAULT NULL
@@ -226,7 +226,7 @@ BEGIN
 
     -- Check and create SLS_Discount_Reasons table
     TRY_CREATE_TABLE('SLS_DISCOUNT_REASONS', ' 
-        id NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+        id NUMBER PRIMARY KEY,
         name VARCHAR2(25) UNIQUE NOT NULL,
         created_on DATE DEFAULT SYSDATE NOT NULL,
         last_updated_on DATE DEFAULT NULL
@@ -298,7 +298,7 @@ BEGIN
 
     -- Check and create SLS_Order_Statuses table
     TRY_CREATE_TABLE('SLS_ORDER_STATUSES', ' 
-        id NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+        id NUMBER PRIMARY KEY,
         name VARCHAR2(25) UNIQUE NOT NULL,
         created_on DATE DEFAULT SYSDATE NOT NULL,
         last_updated_on DATE DEFAULT NULL
@@ -306,7 +306,7 @@ BEGIN
 
     -- Check and create SLS_Orders table
     TRY_CREATE_TABLE('SLS_ORDERS', ' 
-        id NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+        id NUMBER PRIMARY KEY,
         customer_id NUMBER NOT NULL,
         customer_region_id NUMBER NOT NULL,
         address NVARCHAR2(850) NOT NULL,
@@ -366,7 +366,7 @@ BEGIN
 
     -- Check and create BLG_Invoice_Statuses table
     TRY_CREATE_TABLE('BLG_INVOICE_STATUSES', ' 
-        id NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+        id NUMBER PRIMARY KEY,
         name VARCHAR2(25) UNIQUE NOT NULL,
         created_on DATE DEFAULT SYSDATE NOT NULL,
         last_updated_on DATE DEFAULT NULL
@@ -374,7 +374,7 @@ BEGIN
 
     -- Check and create BLG_Invoices table
     TRY_CREATE_TABLE('BLG_INVOICES', ' 
-        id NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+        id NUMBER PRIMARY KEY,
         customer_id NUMBER NOT NULL,
         total_discount_in_eur NUMBER(10, 2) DEFAULT 0,
         status_id NUMBER NOT NULL,

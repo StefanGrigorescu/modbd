@@ -51,7 +51,7 @@ END;
 BEGIN
     -- Check and create IDNT_Regions table
     TRY_CREATE_TABLE('IDNT_REGIONS', ' 
-        id NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+        id NUMBER PRIMARY KEY,
         name NVARCHAR2(150) UNIQUE NOT NULL,
         created_on DATE DEFAULT SYSDATE NOT NULL,
         last_updated_on DATE DEFAULT NULL
@@ -69,7 +69,7 @@ BEGIN
 
     -- Check and create IDNT_Roles table
     TRY_CREATE_TABLE('IDNT_ROLES', ' 
-        id NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+        id NUMBER PRIMARY KEY,
         name VARCHAR2(25) UNIQUE NOT NULL,
         created_on DATE DEFAULT SYSDATE NOT NULL,
         last_updated_on DATE DEFAULT NULL
@@ -167,7 +167,7 @@ BEGIN
 
     -- Check and create SLS_Product_Categories table
     TRY_CREATE_TABLE('SLS_PRODUCT_CATEGORIES', ' 
-        id NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+        id NUMBER PRIMARY KEY,
         name NVARCHAR2(150) UNIQUE NOT NULL,
         created_on DATE DEFAULT SYSDATE NOT NULL,
         last_updated_on DATE DEFAULT NULL
@@ -213,7 +213,7 @@ BEGIN
 
     -- Check and create SLS_Discount_Types table
     TRY_CREATE_TABLE('SLS_DISCOUNT_TYPES', ' 
-        id NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+        id NUMBER PRIMARY KEY,
         name VARCHAR2(25) UNIQUE NOT NULL,
         created_on DATE DEFAULT SYSDATE NOT NULL,
         last_updated_on DATE DEFAULT NULL
@@ -221,7 +221,7 @@ BEGIN
 
     -- Check and create SLS_Discount_Reasons table
     TRY_CREATE_TABLE('SLS_DISCOUNT_REASONS', ' 
-        id NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+        id NUMBER PRIMARY KEY,
         name VARCHAR2(25) UNIQUE NOT NULL,
         created_on DATE DEFAULT SYSDATE NOT NULL,
         last_updated_on DATE DEFAULT NULL

@@ -36,96 +36,99 @@ EXCEPTION
 END;
 /
 
--- Create procedure to insert a region and its cities
 CREATE OR REPLACE PROCEDURE INSERT_REGION_AND_CITIES (
+    p_region_id IN NUMBER,
     p_region_name IN NVARCHAR2,
     p_city_names_csv IN NVARCHAR2
 ) IS
-    region_id NUMBER;
-    region_exists NUMBER := 0;
+    region_exists_by_id NUMBER := 0;
+    region_exists_by_name NUMBER := 0;
 BEGIN
-    -- Check if the region already exists
-    BEGIN
-        SELECT id INTO region_id
-        FROM IDNT_REGIONS
-        WHERE UPPER(name) = UPPER(p_region_name);
+    SELECT 
+        COUNT(CASE WHEN id = p_region_id THEN 1 END) INTO region_exists_by_id,
+        COUNT(CASE WHEN UPPER(name) = UPPER(p_region_name) THEN 1 END) INTO region_exists_by_name
+    FROM IDNT_REGIONS;
 
-        region_exists := 1;
-    EXCEPTION
-        WHEN NO_DATA_FOUND THEN
-            region_exists := 0;
-    END;
-
-    IF region_exists = 0 THEN
-        -- Insert the region if it doesn't exist
-        INSERT INTO IDNT_REGIONS (name)
-        VALUES (p_region_name)
-        RETURNING id INTO region_id;
-        LOG_INFORMATION('INSERT_REGION_AND_CITIES: Region ' || p_region_name || ' created.');
+    -- Ensure both ID and name are unique
+    IF region_exists_by_id > 0 THEN
+        LOG_DEBUG('INSERT_REGION_AND_CITIES: Region ID ' || p_region_id || ' already exists.');
+    ELSIF region_exists_by_name > 0 THEN
+        LOG_DEBUG('INSERT_REGION_AND_CITIES: Region name ' || p_region_name || ' already exists.');
     ELSE
-        LOG_DEBUG('INSERT_REGION_AND_CITIES: Region ' || p_region_name || ' already exists.');
+        -- Insert the region if both ID and name are unique
+        INSERT INTO IDNT_REGIONS (id, name)
+        VALUES (p_region_id, p_region_name);
+        LOG_INFORMATION('INSERT_REGION_AND_CITIES: Region ' || p_region_name || ' with ID ' || p_region_id || ' created.');
+
+        -- Split the city names CSV and insert each city
+        FOR city_name IN (SELECT REGEXP_SUBSTR(p_city_names_csv, '[^,]+', 1, LEVEL) AS city_name
+                          FROM DUAL
+                          CONNECT BY REGEXP_SUBSTR(p_city_names_csv, '[^,]+', 1, LEVEL) IS NOT NULL) LOOP
+            INSERT_CITY(p_region_id, city_name.city_name);
+        END LOOP;
+
+        COMMIT;
     END IF;
 
-    -- Split the city names CSV and insert each city
-    FOR city_name IN (SELECT REGEXP_SUBSTR(p_city_names_csv, '[^,]+', 1, LEVEL) AS city_name
-                      FROM DUAL
-                      CONNECT BY REGEXP_SUBSTR(p_city_names_csv, '[^,]+', 1, LEVEL) IS NOT NULL) LOOP
-        INSERT_CITY(region_id, city_name.city_name);
-    END LOOP;
-
-    COMMIT;
 EXCEPTION
     WHEN OTHERS THEN
         LOG_ERROR('INSERT_REGION_AND_CITIES: Error creating region ' || p_region_name || ': ' || SQLERRM);
+        ROLLBACK;
 END;
 /
 
 BEGIN
-    INSERT_REGION_AND_CITIES('Muntenia', 'Bucuresti,Ploiesti,Giurgiu,Targoviste,Alexandria,Slobozia');
-    INSERT_REGION_AND_CITIES('Transilvania', 'Cluj-Napoca,Sibiu,Brasov,Alba Iulia,Targu Mures,Oradea');
-    INSERT_REGION_AND_CITIES('Moldova', 'Iasi,Bacau,Suceava,Botosani,Piatra Neamt,Vaslui');
-    INSERT_REGION_AND_CITIES('Dobrogea', 'Constanta,Tulcea,Mangalia,Medgidia,Navodari');
-    INSERT_REGION_AND_CITIES('Banat', 'Timisoara,Resita,Lugoj,Caransebes');
-    INSERT_REGION_AND_CITIES('Crisana', 'Oradea,Arad,Salonta,Beius,Marghita');
-    INSERT_REGION_AND_CITIES('Maramures', 'Baia Mare,Sighetu Marmatiei,Borsa,Viseu de Sus');
-    INSERT_REGION_AND_CITIES('Oltenia', 'Craiova,Targu Jiu,Slatina,Ramnicu Valcea,Drobeta-Turnu Severin');
-    INSERT_REGION_AND_CITIES('Bucovina', 'Radauti,Campulung Moldovenesc,Vatra Dornei');
+    INSERT_REGION_AND_CITIES(0, 'Muntenia', 'Bucuresti,Ploiesti,Giurgiu,Targoviste,Alexandria,Slobozia');
+    INSERT_REGION_AND_CITIES(1, 'Transilvania', 'Cluj-Napoca,Sibiu,Brasov,Alba Iulia,Targu Mures,Oradea');
+    INSERT_REGION_AND_CITIES(2, 'Moldova', 'Iasi,Bacau,Suceava,Botosani,Piatra Neamt,Vaslui');
+    INSERT_REGION_AND_CITIES(3, 'Dobrogea', 'Constanta,Tulcea,Mangalia,Medgidia,Navodari');
+    INSERT_REGION_AND_CITIES(4, 'Banat', 'Timisoara,Resita,Lugoj,Caransebes');
+    INSERT_REGION_AND_CITIES(5, 'Crisana', 'Oradea,Arad,Salonta,Beius,Marghita');
+    INSERT_REGION_AND_CITIES(6, 'Maramures', 'Baia Mare,Sighetu Marmatiei,Borsa,Viseu de Sus');
+    INSERT_REGION_AND_CITIES(7, 'Oltenia', 'Craiova,Targu Jiu,Slatina,Ramnicu Valcea,Drobeta-Turnu Severin');
+    INSERT_REGION_AND_CITIES(8, 'Bucovina', 'Radauti,Campulung Moldovenesc,Vatra Dornei');
 END;
 /
 
 
--- Create procedure to insert a role
 CREATE OR REPLACE PROCEDURE INSERT_ROLE (
+    p_role_id IN NUMBER,
     p_role_name IN VARCHAR2
 ) IS
-    role_exists NUMBER := 0;
+    role_exists_by_id NUMBER := 0;
+    role_exists_by_name NUMBER := 0;
 BEGIN
-    -- Check if the role already exists
-    SELECT COUNT(*) INTO role_exists
-    FROM IDNT_ROLES
-    WHERE UPPER(name) = UPPER(p_role_name);
+    -- Check if the role ID or name already exists
+    SELECT 
+        COUNT(CASE WHEN id = p_role_id THEN 1 END) INTO role_exists_by_id,
+        COUNT(CASE WHEN UPPER(name) = UPPER(p_role_name) THEN 1 END) INTO role_exists_by_name
+    FROM IDNT_ROLES;
 
-    IF role_exists = 0 THEN
-        -- Insert the role if it doesn't exist
-        INSERT INTO IDNT_ROLES (name)
-        VALUES (p_role_name);
-        LOG_INFORMATION('INSERT_ROLE: Role ' || p_role_name || ' created.');
+    -- Ensure both ID and name are unique
+    IF role_exists_by_id > 0 THEN
+        LOG_DEBUG('INSERT_ROLE: Role ID ' || p_role_id || ' already exists.');
+    ELSIF role_exists_by_name > 0 THEN
+        LOG_DEBUG('INSERT_ROLE: Role name ' || p_role_name || ' already exists.');
     ELSE
-        LOG_DEBUG('INSERT_ROLE: Role ' || p_role_name || ' already exists.');
+        -- Insert the role if both ID and name are unique
+        INSERT INTO IDNT_ROLES (id, name)
+        VALUES (p_role_id, p_role_name);
+        LOG_INFORMATION('INSERT_ROLE: Role ' || p_role_name || ' with ID ' || p_role_id || ' created.');
     END IF;
 
     COMMIT;
 EXCEPTION
     WHEN OTHERS THEN
         LOG_ERROR('INSERT_ROLE: Error creating role ' || p_role_name || ': ' || SQLERRM);
+        ROLLBACK;
 END;
 /
 
 BEGIN
-    INSERT_ROLE('System Admin');
-    INSERT_ROLE('Roles Admin');
-    INSERT_ROLE('Purchases Rep');
-    INSERT_ROLE('Sales Rep');
+    INSERT_ROLE(0, 'System Admin');
+    INSERT_ROLE(1, 'Roles Admin');
+    INSERT_ROLE(2, 'Purchases Rep');
+    INSERT_ROLE(3, 'Sales Rep');
 END;
 /
 
@@ -928,66 +931,63 @@ EXCEPTION
 END;
 /
 
--- Create procedure to insert a category and its subcategories
 CREATE OR REPLACE PROCEDURE INSERT_CATEGORY_AND_SUBCATEGORIES (
+    p_category_id IN NUMBER,
     p_category_name IN NVARCHAR2,
     p_subcategory_names_csv IN NVARCHAR2
 ) IS
-    category_id NUMBER;
-    category_exists NUMBER := 0;
+    category_exists_by_id NUMBER := 0;
+    category_exists_by_name NUMBER := 0;
 BEGIN
-    -- Check if the category already exists
-    BEGIN
-        SELECT id INTO category_id
-        FROM SLS_PRODUCT_CATEGORIES
-        WHERE UPPER(name) = UPPER(p_category_name);
+    -- Check if the category ID or name already exists
+    SELECT 
+        COUNT(CASE WHEN id = p_category_id THEN 1 END) INTO category_exists_by_id,
+        COUNT(CASE WHEN UPPER(name) = UPPER(p_category_name) THEN 1 END) INTO category_exists_by_name
+    FROM SLS_PRODUCT_CATEGORIES;
 
-        category_exists := 1;
-    EXCEPTION
-        WHEN NO_DATA_FOUND THEN
-            category_exists := 0;
-    END;
-
-    IF category_exists = 0 THEN
-        -- Insert the category if it doesn't exist
-        INSERT INTO SLS_PRODUCT_CATEGORIES (name)
-        VALUES (p_category_name)
-        RETURNING id INTO category_id;
-        LOG_INFORMATION('INSERT_CATEGORY_AND_SUBCATEGORIES: Category ' || p_category_name || ' created.');
+    -- Ensure both ID and name are unique
+    IF category_exists_by_id > 0 THEN
+        LOG_DEBUG('INSERT_CATEGORY_AND_SUBCATEGORIES: Category ID ' || p_category_id || ' already exists.');
+    ELSIF category_exists_by_name > 0 THEN
+        LOG_DEBUG('INSERT_CATEGORY_AND_SUBCATEGORIES: Category name ' || p_category_name || ' already exists.');
     ELSE
-        LOG_DEBUG('INSERT_CATEGORY_AND_SUBCATEGORIES: Category ' || p_category_name || ' already exists.');
+        -- Insert the category if both ID and name are unique
+        INSERT INTO SLS_PRODUCT_CATEGORIES (id, name)
+        VALUES (p_category_id, p_category_name);
+        LOG_INFORMATION('INSERT_CATEGORY_AND_SUBCATEGORIES: Category ' || p_category_name || ' with ID ' || p_category_id || ' created.');
     END IF;
 
     -- Split the subcategory names CSV and insert each subcategory
     FOR subcategory_name IN (SELECT REGEXP_SUBSTR(p_subcategory_names_csv, '[^,]+', 1, LEVEL) AS subcategory_name
                              FROM DUAL
                              CONNECT BY REGEXP_SUBSTR(p_subcategory_names_csv, '[^,]+', 1, LEVEL) IS NOT NULL) LOOP
-        INSERT_SUBCATEGORY(category_id, subcategory_name.subcategory_name);
+        INSERT_SUBCATEGORY(p_category_id, subcategory_name.subcategory_name);
     END LOOP;
 
     COMMIT;
 EXCEPTION
     WHEN OTHERS THEN
         LOG_ERROR('INSERT_CATEGORY_AND_SUBCATEGORIES: Error creating category ' || p_category_name || ': ' || SQLERRM);
+        ROLLBACK;
 END;
 /
 
 BEGIN
-    INSERT_CATEGORY_AND_SUBCATEGORIES('Sport', 'Football,Basketball,Tennis,Running,Swimming,Fitness,Yoga,Hiking');
-    INSERT_CATEGORY_AND_SUBCATEGORIES('Music', 'Instruments,Sheet Music,Accessories,Recording Equipment,Amps,Speakers,Headphones,Turntables');
-    INSERT_CATEGORY_AND_SUBCATEGORIES('Art', 'Painting,Sculpture,Drawing,Photography,Printmaking,Pencil Sketching,Watercolor,Acrylic,Ceramics');
-    INSERT_CATEGORY_AND_SUBCATEGORIES('Electronics', 'Mobile Phones,Laptops,Tablets,Cameras,Accessories');
-    INSERT_CATEGORY_AND_SUBCATEGORIES('Home Appliances', 'Refrigerators,Washing Machines,Microwaves,Vacuum Cleaners,Air Conditioners');
-    INSERT_CATEGORY_AND_SUBCATEGORIES('Furniture', 'Living Room,Bedroom,Office,Outdoor,Storage');
-    INSERT_CATEGORY_AND_SUBCATEGORIES('Clothing', 'Men,Women,Kids,Accessories,Shoes');
-    INSERT_CATEGORY_AND_SUBCATEGORIES('Books', 'Fiction,Non-Fiction,Children,Educational,Comics,Hystorical,Science Fiction');
-    INSERT_CATEGORY_AND_SUBCATEGORIES('Toys', 'Action Figures,Dolls,Puzzles,Educational Toys,Outdoor Toys');
-    INSERT_CATEGORY_AND_SUBCATEGORIES('Beauty', 'Skincare,Makeup,Haircare,Fragrances,Tools');
-    INSERT_CATEGORY_AND_SUBCATEGORIES('Automotive', 'Car Accessories,Motorcycle Accessories,Tools,Parts,Electronics');
-    INSERT_CATEGORY_AND_SUBCATEGORIES('Garden', 'Plants,Tools,Outdoor Furniture,Decorations,Watering Equipment');
-    INSERT_CATEGORY_AND_SUBCATEGORIES('Health', 'Supplements,Medical Equipment,Personal Care,Fitness Equipment');
-    INSERT_CATEGORY_AND_SUBCATEGORIES('Office Supplies', 'Stationery,Printers,Office Furniture,Storage,Electronics');
-    INSERT_CATEGORY_AND_SUBCATEGORIES('Pet Supplies', 'Food,Toys,Accessories,Grooming,Health');
+    INSERT_CATEGORY_AND_SUBCATEGORIES(0, 'Sport', 'Football,Basketball,Tennis,Running,Swimming,Fitness,Yoga,Hiking');
+    INSERT_CATEGORY_AND_SUBCATEGORIES(1, 'Music', 'Instruments,Sheet Music,Accessories,Recording Equipment,Amps,Speakers,Headphones,Turntables');
+    INSERT_CATEGORY_AND_SUBCATEGORIES(2, 'Art', 'Painting,Sculpture,Drawing,Photography,Printmaking,Pencil Sketching,Watercolor,Acrylic,Ceramics');
+    INSERT_CATEGORY_AND_SUBCATEGORIES(3, 'Electronics', 'Mobile Phones,Laptops,Tablets,Cameras,Accessories');
+    INSERT_CATEGORY_AND_SUBCATEGORIES(4, 'Home Appliances', 'Refrigerators,Washing Machines,Microwaves,Vacuum Cleaners,Air Conditioners');
+    INSERT_CATEGORY_AND_SUBCATEGORIES(5, 'Furniture', 'Living Room,Bedroom,Office,Outdoor,Storage');
+    INSERT_CATEGORY_AND_SUBCATEGORIES(6, 'Clothing', 'Men,Women,Kids,Accessories,Shoes');
+    INSERT_CATEGORY_AND_SUBCATEGORIES(7, 'Books', 'Fiction,Non-Fiction,Children,Educational,Comics,Hystorical,Science Fiction');
+    INSERT_CATEGORY_AND_SUBCATEGORIES(8, 'Toys', 'Action Figures,Dolls,Puzzles,Educational Toys,Outdoor Toys');
+    INSERT_CATEGORY_AND_SUBCATEGORIES(9, 'Beauty', 'Skincare,Makeup,Haircare,Fragrances,Tools');
+    INSERT_CATEGORY_AND_SUBCATEGORIES(10, 'Automotive', 'Car Accessories,Motorcycle Accessories,Tools,Parts,Electronics');
+    INSERT_CATEGORY_AND_SUBCATEGORIES(11, 'Garden', 'Plants,Tools,Outdoor Furniture,Decorations,Watering Equipment');
+    INSERT_CATEGORY_AND_SUBCATEGORIES(12, 'Health', 'Supplements,Medical Equipment,Personal Care,Fitness Equipment');
+    INSERT_CATEGORY_AND_SUBCATEGORIES(13, 'Office Supplies', 'Stationery,Printers,Office Furniture,Storage,Electronics');
+    INSERT_CATEGORY_AND_SUBCATEGORIES(14, 'Pet Supplies', 'Food,Toys,Accessories,Grooming,Health');
 END;
 /
 
@@ -1394,145 +1394,170 @@ END;
 /
 
 
--- Create procedure to insert a discount type
 CREATE OR REPLACE PROCEDURE INSERT_DISCOUNT_TYPE (
+    p_discount_type_id IN NUMBER,
     p_discount_type_name IN VARCHAR2
 ) IS
-    discount_type_exists NUMBER := 0;
+    discount_type_exists_by_id NUMBER := 0;
+    discount_type_exists_by_name NUMBER := 0;
 BEGIN
-    -- Check if the discount type already exists
-    SELECT COUNT(*) INTO discount_type_exists
-    FROM SLS_DISCOUNT_TYPES
-    WHERE UPPER(name) = UPPER(p_discount_type_name);
+    -- Check if the discount type ID or name already exists
+    SELECT 
+        COUNT(CASE WHEN id = p_discount_type_id THEN 1 END) INTO discount_type_exists_by_id,
+        COUNT(CASE WHEN UPPER(name) = UPPER(p_discount_type_name) THEN 1 END) INTO discount_type_exists_by_name
+    FROM SLS_DISCOUNT_TYPES;
 
-    IF discount_type_exists = 0 THEN
-        -- Insert the discount type if it doesn't exist
-        INSERT INTO SLS_DISCOUNT_TYPES (name)
-        VALUES (p_discount_type_name);
-        LOG_INFORMATION('INSERT_DISCOUNT_TYPE: Discount type ' || p_discount_type_name || ' created.');
+    -- Ensure both ID and name are unique
+    IF discount_type_exists_by_id > 0 THEN
+        LOG_DEBUG('INSERT_DISCOUNT_TYPE: Discount type ID ' || p_discount_type_id || ' already exists.');
+    ELSIF discount_type_exists_by_name > 0 THEN
+        LOG_DEBUG('INSERT_DISCOUNT_TYPE: Discount type name ' || p_discount_type_name || ' already exists.');
     ELSE
-        LOG_DEBUG('INSERT_DISCOUNT_TYPE: Discount type ' || p_discount_type_name || ' already exists.');
+        -- Insert the discount type if both ID and name are unique
+        INSERT INTO SLS_DISCOUNT_TYPES (id, name)
+        VALUES (p_discount_type_id, p_discount_type_name);
+        LOG_INFORMATION('INSERT_DISCOUNT_TYPE: Discount type ' || p_discount_type_name || ' with ID ' || p_discount_type_id || ' created.');
     END IF;
 
     COMMIT;
 EXCEPTION
     WHEN OTHERS THEN
         LOG_ERROR('INSERT_DISCOUNT_TYPE: Error creating discount type ' || p_discount_type_name || ': ' || SQLERRM);
+        ROLLBACK;
 END;
 /
 
 BEGIN
-    INSERT_DISCOUNT_TYPE('Absolute value');
-    INSERT_DISCOUNT_TYPE('Percentage');
+    INSERT_DISCOUNT_TYPE(0, 'Absolute value');
+    INSERT_DISCOUNT_TYPE(1, 'Percentage');
 END;
 /
 
 
 CREATE OR REPLACE PROCEDURE INSERT_DISCOUNT_REASON (
+    p_discount_reason_id IN NUMBER,
     p_discount_reason_name IN VARCHAR2
 ) IS
-    discount_reason_exists NUMBER := 0;
+    discount_reason_exists_by_id NUMBER := 0;
+    discount_reason_exists_by_name NUMBER := 0;
 BEGIN
-    -- Check if the discount reason already exists
-    SELECT COUNT(*) INTO discount_reason_exists
-    FROM SLS_DISCOUNT_REASONS
-    WHERE UPPER(name) = UPPER(p_discount_reason_name);
+    -- Check if the discount reason ID or name already exists
+    SELECT 
+        COUNT(CASE WHEN id = p_discount_reason_id THEN 1 END) INTO discount_reason_exists_by_id,
+        COUNT(CASE WHEN UPPER(name) = UPPER(p_discount_reason_name) THEN 1 END) INTO discount_reason_exists_by_name
+    FROM SLS_DISCOUNT_REASONS;
 
-    IF discount_reason_exists = 0 THEN
-        -- Insert the discount reason if it doesn't exist
-        INSERT INTO SLS_DISCOUNT_REASONS (name)
-        VALUES (p_discount_reason_name);
-        LOG_INFORMATION('INSERT_DISCOUNT_REASON: Discount reason ' || p_discount_reason_name || ' created.');
+    -- Ensure both ID and name are unique
+    IF discount_reason_exists_by_id > 0 THEN
+        LOG_DEBUG('INSERT_DISCOUNT_REASON: Discount reason ID ' || p_discount_reason_id || ' already exists.');
+    ELSIF discount_reason_exists_by_name > 0 THEN
+        LOG_DEBUG('INSERT_DISCOUNT_REASON: Discount reason name ' || p_discount_reason_name || ' already exists.');
     ELSE
-        LOG_DEBUG('INSERT_DISCOUNT_REASON: Discount reason ' || p_discount_reason_name || ' already exists.');
+        -- Insert the discount reason if both ID and name are unique
+        INSERT INTO SLS_DISCOUNT_REASONS (id, name)
+        VALUES (p_discount_reason_id, p_discount_reason_name);
+        LOG_INFORMATION('INSERT_DISCOUNT_REASON: Discount reason ' || p_discount_reason_name || ' with ID ' || p_discount_reason_id || ' created.');
     END IF;
 
     COMMIT;
 EXCEPTION
     WHEN OTHERS THEN
         LOG_ERROR('INSERT_DISCOUNT_REASON: Error creating discount reason ' || p_discount_reason_name || ': ' || SQLERRM);
+        ROLLBACK;
 END;
 /
 
 BEGIN
-    INSERT_DISCOUNT_REASON('Fidelity');
-    INSERT_DISCOUNT_REASON('Re-engagement');
-    INSERT_DISCOUNT_REASON('Seasonal Sale');
-    INSERT_DISCOUNT_REASON('Clearance');
-    INSERT_DISCOUNT_REASON('Referral');
-    INSERT_DISCOUNT_REASON('First Purchase');
-    INSERT_DISCOUNT_REASON('Bulk Purchase');
-    INSERT_DISCOUNT_REASON('Holiday Sale');
+    INSERT_DISCOUNT_REASON(0, 'Fidelity');
+    INSERT_DISCOUNT_REASON(1, 'Re-engagement');
+    INSERT_DISCOUNT_REASON(2, 'Seasonal Sale');
+    INSERT_DISCOUNT_REASON(3, 'Clearance');
+    INSERT_DISCOUNT_REASON(4, 'Referral');
+    INSERT_DISCOUNT_REASON(5, 'First Purchase');
+    INSERT_DISCOUNT_REASON(6, 'Bulk Purchase');
+    INSERT_DISCOUNT_REASON(7, 'Holiday Sale');
 END;
 /
 
 
--- Create procedure to insert an order status
 CREATE OR REPLACE PROCEDURE INSERT_ORDER_STATUS (
+    p_status_id IN NUMBER,
     p_status_name IN VARCHAR2
 ) IS
-    status_exists NUMBER := 0;
+    status_exists_by_id NUMBER := 0;
+    status_exists_by_name NUMBER := 0;
 BEGIN
-    -- Check if the status already exists
-    SELECT COUNT(*) INTO status_exists
-    FROM SLS_ORDER_STATUSES
-    WHERE UPPER(name) = UPPER(p_status_name);
+    -- Check if the order status ID or name already exists
+    SELECT 
+        COUNT(CASE WHEN id = p_status_id THEN 1 END) INTO status_exists_by_id,
+        COUNT(CASE WHEN UPPER(name) = UPPER(p_status_name) THEN 1 END) INTO status_exists_by_name
+    FROM SLS_ORDER_STATUSES;
 
-    IF status_exists = 0 THEN
-        -- Insert the status if it doesn't exist
-        INSERT INTO SLS_ORDER_STATUSES (name)
-        VALUES (p_status_name);
-        LOG_INFORMATION('INSERT_ORDER_STATUS: Status ' || p_status_name || ' created.');
+    -- Ensure both ID and name are unique
+    IF status_exists_by_id > 0 THEN
+        LOG_DEBUG('INSERT_ORDER_STATUS: Status ID ' || p_status_id || ' already exists.');
+    ELSIF status_exists_by_name > 0 THEN
+        LOG_DEBUG('INSERT_ORDER_STATUS: Status name ' || p_status_name || ' already exists.');
     ELSE
-        LOG_DEBUG('INSERT_ORDER_STATUS: Status ' || p_status_name || ' already exists.');
+        -- Insert the order status if both ID and name are unique
+        INSERT INTO SLS_ORDER_STATUSES (id, name)
+        VALUES (p_status_id, p_status_name);
+        LOG_INFORMATION('INSERT_ORDER_STATUS: Status ' || p_status_name || ' with ID ' || p_status_id || ' created.');
     END IF;
 
     COMMIT;
 EXCEPTION
     WHEN OTHERS THEN
         LOG_ERROR('INSERT_ORDER_STATUS: Error creating status ' || p_status_name || ': ' || SQLERRM);
+        ROLLBACK;
 END;
 /
 
 BEGIN
-    INSERT_ORDER_STATUS('Pending');
-    INSERT_ORDER_STATUS('Completed');
-    INSERT_ORDER_STATUS('Canceled');
+    INSERT_ORDER_STATUS(0, 'Pending');
+    INSERT_ORDER_STATUS(1, 'Completed');
+    INSERT_ORDER_STATUS(2, 'Canceled');
 END;
 /
 
 
--- Create procedure to insert an invoice status
 CREATE OR REPLACE PROCEDURE INSERT_INVOICE_STATUS (
+    p_status_id IN NUMBER,
     p_status_name IN VARCHAR2
 ) IS
-    status_exists NUMBER := 0;
+    status_exists_by_id NUMBER := 0;
+    status_exists_by_name NUMBER := 0;
 BEGIN
-    -- Check if the status already exists
-    SELECT COUNT(*) INTO status_exists
-    FROM BLG_INVOICE_STATUSES
-    WHERE UPPER(name) = UPPER(p_status_name);
+    -- Check if the invoice status ID or name already exists
+    SELECT 
+        COUNT(CASE WHEN id = p_status_id THEN 1 END) INTO status_exists_by_id,
+        COUNT(CASE WHEN UPPER(name) = UPPER(p_status_name) THEN 1 END) INTO status_exists_by_name
+    FROM BLG_INVOICE_STATUSES;
 
-    IF status_exists = 0 THEN
-        -- Insert the status if it doesn't exist
-        INSERT INTO BLG_INVOICE_STATUSES (name)
-        VALUES (p_status_name);
-        LOG_INFORMATION('INSERT_INVOICE_STATUS: Status ' || p_status_name || ' created.');
+    -- Ensure both ID and name are unique
+    IF status_exists_by_id > 0 THEN
+        LOG_DEBUG('INSERT_INVOICE_STATUS: Status ID ' || p_status_id || ' already exists.');
+    ELSIF status_exists_by_name > 0 THEN
+        LOG_DEBUG('INSERT_INVOICE_STATUS: Status name ' || p_status_name || ' already exists.');
     ELSE
-        LOG_DEBUG('INSERT_INVOICE_STATUS: Status ' || p_status_name || ' already exists.');
+        -- Insert the invoice status if both ID and name are unique
+        INSERT INTO BLG_INVOICE_STATUSES (id, name)
+        VALUES (p_status_id, p_status_name);
+        LOG_INFORMATION('INSERT_INVOICE_STATUS: Status ' || p_status_name || ' with ID ' || p_status_id || ' created.');
     END IF;
 
     COMMIT;
 EXCEPTION
     WHEN OTHERS THEN
         LOG_ERROR('INSERT_INVOICE_STATUS: Error creating status ' || p_status_name || ': ' || SQLERRM);
+        ROLLBACK;
 END;
 /
 
 BEGIN
-    INSERT_INVOICE_STATUS('Pending');
-    INSERT_INVOICE_STATUS('Paid');
-    INSERT_INVOICE_STATUS('Overdue');
-    INSERT_INVOICE_STATUS('Canceled');
+    INSERT_INVOICE_STATUS(0, 'Pending');
+    INSERT_INVOICE_STATUS(1, 'Paid');
+    INSERT_INVOICE_STATUS(2, 'Overdue');
+    INSERT_INVOICE_STATUS(3, 'Canceled');
 END;
 /
