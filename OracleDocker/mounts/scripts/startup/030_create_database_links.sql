@@ -7,6 +7,12 @@ ALTER SESSION SET CONTAINER = eshop_global;
 -- Set the schema to the desired user
 ALTER SESSION SET CURRENT_SCHEMA = ESHOP_GLOBAL_USER;
 
+-- Log the schema name
+BEGIN
+    DBMS_OUTPUT.PUT_LINE('Creating database link in schema: ' || SYS_CONTEXT('USERENV', 'CURRENT_SCHEMA'));
+END;
+/
+
 -- Drop and recreate LINK_TO_MUNTENIA
 BEGIN
     EXECUTE IMMEDIATE 'DROP DATABASE LINK link_to_muntenia';
@@ -39,6 +45,7 @@ END;
 
 -- Drop and recreate LINK_TO_ROMANIA
 BEGIN
+    DBMS_OUTPUT.PUT_LINE('Creating database link in schema: ' || SYS_CONTEXT('USERENV', 'CURRENT_SCHEMA'));
     EXECUTE IMMEDIATE 'DROP DATABASE LINK link_to_romania';
 EXCEPTION
     WHEN OTHERS THEN
@@ -72,6 +79,12 @@ ALTER SESSION SET CONTAINER = eshop_muntenia;
 
 -- Set the schema to the desired user
 ALTER SESSION SET CURRENT_SCHEMA = ESHOP_MUNTENIA_USER;
+
+-- Log the schema name
+BEGIN
+    DBMS_OUTPUT.PUT_LINE('Creating database link in schema: ' || SYS_CONTEXT('USERENV', 'CURRENT_SCHEMA'));
+END;
+/
 
 -- Drop and recreate LINK_TO_GLOBAL
 BEGIN
@@ -109,6 +122,12 @@ ALTER SESSION SET CONTAINER = eshop_romania;
 -- Set the schema to the desired user
 ALTER SESSION SET CURRENT_SCHEMA = ESHOP_ROMANIA_USER;
 
+-- Log the schema name
+BEGIN
+    DBMS_OUTPUT.PUT_LINE('Creating database link in schema: ' || SYS_CONTEXT('USERENV', 'CURRENT_SCHEMA'));
+END;
+/
+
 -- Drop and recreate LINK_TO_GLOBAL
 BEGIN
     EXECUTE IMMEDIATE 'DROP DATABASE LINK link_to_global';
@@ -137,3 +156,4 @@ EXCEPTION
     WHEN OTHERS THEN
         DBMS_OUTPUT.PUT_LINE('Error testing LINK_TO_GLOBAL from ESHOP_ROMANIA: ' || SQLERRM);
 END;
+/
