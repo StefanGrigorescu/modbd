@@ -10,7 +10,7 @@ BEGIN
 
     IF link_exists = 0 THEN
         EXECUTE IMMEDIATE '
-            CREATE DATABASE LINK link_to_muntenia
+            CREATE PUBLIC DATABASE LINK link_to_muntenia
             CONNECT TO "muntenia_admin" IDENTIFIED BY "MunteniaAdminPassword123!"
             USING ''(DESCRIPTION =
                 (ADDRESS = (PROTOCOL = TCP)(HOST = localhost)(PORT = 1521))
@@ -28,7 +28,7 @@ BEGIN
 
     IF link_exists = 0 THEN
         EXECUTE IMMEDIATE '
-            CREATE DATABASE LINK link_to_romania
+            CREATE PUBLIC DATABASE LINK link_to_romania
             CONNECT TO "romania_admin" IDENTIFIED BY "RomaniaAdminPassword123!"
             USING ''(DESCRIPTION =
                 (ADDRESS = (PROTOCOL = TCP)(HOST = localhost)(PORT = 1521))
@@ -50,7 +50,7 @@ BEGIN
 
     IF link_exists = 0 THEN
         EXECUTE IMMEDIATE '
-            CREATE DATABASE LINK link_to_global
+            CREATE PUBLIC DATABASE LINK link_to_global
             CONNECT TO "global_admin" IDENTIFIED BY "GlobalAdminPassword123!"
             USING ''(DESCRIPTION =
                 (ADDRESS = (PROTOCOL = TCP)(HOST = localhost)(PORT = 1521))
@@ -72,7 +72,7 @@ BEGIN
 
     IF link_exists = 0 THEN
         EXECUTE IMMEDIATE '
-            CREATE DATABASE LINK link_to_global
+            CREATE PUBLIC DATABASE LINK link_to_global
             CONNECT TO "global_admin" IDENTIFIED BY "GlobalAdminPassword123!"
             USING ''(DESCRIPTION =
                 (ADDRESS = (PROTOCOL = TCP)(HOST = localhost)(PORT = 1521))
