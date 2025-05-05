@@ -92,3 +92,10 @@ BEGIN
     DBMS_OUTPUT.PUT_LINE('global_create_schema: Necessary privileges were granted to eshop_global_user.');
 END;
 /
+
+-- Grant necessary privileges to ESHOP_GLOBAL_USER for database links
+BEGIN
+    EXECUTE IMMEDIATE 'GRANT CREATE PUBLIC DATABASE LINK TO ESHOP_GLOBAL_USER';
+    EXECUTE IMMEDIATE 'GRANT CREATE SESSION TO ESHOP_GLOBAL_USER';
+END;
+/

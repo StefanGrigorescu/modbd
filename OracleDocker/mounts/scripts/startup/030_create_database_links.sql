@@ -1,82 +1,44 @@
--- Switch to ESHOP_GLOBAL PDB
+-- Switch to GLOBAL PDB
 ALTER SESSION SET CONTAINER = eshop_global;
 
-DECLARE
-    link_exists NUMBER := 0;
+-- Drop the database link if it already exists
 BEGIN
-    SELECT COUNT(*) INTO link_exists
-    FROM ALL_DB_LINKS
-    WHERE DB_LINK = 'LINK_TO_MUNTENIA';
-
-    IF link_exists = 0 THEN
-        EXECUTE IMMEDIATE '
-            CREATE DATABASE LINK link_to_muntenia
-            CONNECT TO "muntenia_admin" IDENTIFIED BY "MunteniaAdminPassword123!"
-            USING ''(DESCRIPTION =
-                (ADDRESS = (PROTOCOL = TCP)(HOST = localhost)(PORT = 1521))
-                (CONNECT_DATA = (SERVICE_NAME = ESHOP_MUNTENIA)))''';
-    END IF;
+    EXECUTE IMMEDIATE 'DROP PUBLIC DATABASE LINK eshop_romania_link';
+    DBMS_OUTPUT.PUT_LINE('Dropped database link: eshop_romania_link');
+EXCEPTION
+    WHEN OTHERS THEN
+        IF SQLCODE != -1031 THEN -- Ignore "link does not exist" error
+            RAISE;
+        ELSE
+            DBMS_OUTPUT.PUT_LINE('Database link eshop_romania_link does not exist.');
+        END IF;
 END;
 /
 
-DECLARE
-    link_exists NUMBER := 0;
 BEGIN
-    SELECT COUNT(*) INTO link_exists
-    FROM ALL_DB_LINKS
-    WHERE DB_LINK = 'LINK_TO_ROMANIA';
-
-    IF link_exists = 0 THEN
-        EXECUTE IMMEDIATE '
-            CREATE DATABASE LINK link_to_romania
-            CONNECT TO "romania_admin" IDENTIFIED BY "RomaniaAdminPassword123!"
-            USING ''(DESCRIPTION =
-                (ADDRESS = (PROTOCOL = TCP)(HOST = localhost)(PORT = 1521))
-                (CONNECT_DATA = (SERVICE_NAME = ESHOP_ROMANIA)))''';
-    END IF;
+    EXECUTE IMMEDIATE 'DROP PUBLIC DATABASE LINK eshop_muntenia_link';
+    DBMS_OUTPUT.PUT_LINE('Dropped database link: eshop_muntenia_link');
+EXCEPTION
+    WHEN OTHERS THEN
+        IF SQLCODE != -1031 THEN -- Ignore "link does not exist" error
+            RAISE;
+        ELSE
+            DBMS_OUTPUT.PUT_LINE('Database link eshop_muntenia_link does not exist.');
+        END IF;
 END;
 /
 
+-- Create a public database link to ESHOP_ROMANIA
+CREATE PUBLIC DATABASE LINK eshop_romania_link
+CONNECT TO eshop_romania_user IDENTIFIED BY "RomaniaUserPassword123!"
+USING '(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=localhost)(PORT=1521))(CONNECT_DATA=(SERVICE_NAME=ESHOP_ROMANIA)))';
 
--- Switch to ESHOP_MUNTENIA PDB
-ALTER SESSION SET CONTAINER = eshop_muntenia;
+-- Create a public database link to ESHOP_MUNTENIA
+CREATE PUBLIC DATABASE LINK eshop_muntenia_link
+CONNECT TO eshop_muntenia_user IDENTIFIED BY "MunteniaUserPassword123!"
+USING '(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=localhost)(PORT=1521))(CONNECT_DATA=(SERVICE_NAME=ESHOP_MUNTENIA)))';
 
-DECLARE
-    link_exists NUMBER := 0;
-BEGIN
-    SELECT COUNT(*) INTO link_exists
-    FROM ALL_DB_LINKS
-    WHERE DB_LINK = 'LINK_TO_GLOBAL';
-
-    IF link_exists = 0 THEN
-        EXECUTE IMMEDIATE '
-            CREATE DATABASE LINK link_to_global
-            CONNECT TO "global_admin" IDENTIFIED BY "GlobalAdminPassword123!"
-            USING ''(DESCRIPTION =
-                (ADDRESS = (PROTOCOL = TCP)(HOST = localhost)(PORT = 1521))
-                (CONNECT_DATA = (SERVICE_NAME = ESHOP_GLOBAL)))''';
-    END IF;
-END;
-/
-
-
--- Switch to ESHOP_ROMANIA PDB
-ALTER SESSION SET CONTAINER = eshop_romania;
-
-DECLARE
-    link_exists NUMBER := 0;
-BEGIN
-    SELECT COUNT(*) INTO link_exists
-    FROM ALL_DB_LINKS
-    WHERE DB_LINK = 'LINK_TO_GLOBAL';
-
-    IF link_exists = 0 THEN
-        EXECUTE IMMEDIATE '
-            CREATE DATABASE LINK link_to_global
-            CONNECT TO "global_admin" IDENTIFIED BY "GlobalAdminPassword123!"
-            USING ''(DESCRIPTION =
-                (ADDRESS = (PROTOCOL = TCP)(HOST = localhost)(PORT = 1521))
-                (CONNECT_DATA = (SERVICE_NAME = ESHOP_GLOBAL)))''';
-    END IF;
-END;
-/
+-- Query to check if the database links exist
+SELECT DB_LINK, USERNAME, HOST
+FROM DBA_DB_LINKS
+WHERE DB_LINK IN ('ESHOP_ROMANIA_LINK', 'ESHOP_MUNTENIA_LINK');
