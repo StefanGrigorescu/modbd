@@ -38,7 +38,46 @@ CREATE PUBLIC DATABASE LINK eshop_muntenia_link
 CONNECT TO eshop_muntenia_user IDENTIFIED BY "MunteniaUserPassword123!"
 USING '(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=localhost)(PORT=1521))(CONNECT_DATA=(SERVICE_NAME=ESHOP_MUNTENIA)))';
 
--- Query to check if the database links exist
-SELECT DB_LINK, USERNAME, HOST
-FROM DBA_DB_LINKS
-WHERE DB_LINK IN ('ESHOP_ROMANIA_LINK', 'ESHOP_MUNTENIA_LINK');
+-- Switch to ROMANIA PDB
+ALTER SESSION SET CONTAINER = eshop_romania;
+
+-- Drop the database link if it already exists
+BEGIN
+    EXECUTE IMMEDIATE 'DROP PUBLIC DATABASE LINK eshop_romania_global_link';
+    DBMS_OUTPUT.PUT_LINE('Dropped database link: eshop_romania_global_link');
+EXCEPTION
+    WHEN OTHERS THEN
+        IF SQLCODE != -1031 THEN -- Ignore "link does not exist" error
+            RAISE;
+        ELSE
+            DBMS_OUTPUT.PUT_LINE('Database link eshop_romania_link does not exist.');
+        END IF;
+END;
+/
+
+-- Create a public database link to ESHOP_ROMANIA_GLOBAL_LINK
+CREATE PUBLIC DATABASE LINK eshop_romania_global_link
+CONNECT TO eshop_global_user IDENTIFIED BY "GlobalUserPassword123!"
+USING '(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=localhost)(PORT=1521))(CONNECT_DATA=(SERVICE_NAME=ESHOP_GLOBAL)))';
+
+-- Switch to MUNTENIA PDB
+ALTER SESSION SET CONTAINER = eshop_muntenia;
+
+-- Drop the database link if it already exists
+BEGIN
+    EXECUTE IMMEDIATE 'DROP PUBLIC DATABASE LINK eshop_muntenia_global_link';
+    DBMS_OUTPUT.PUT_LINE('Dropped database link: eshop_muntenia_global_link');
+EXCEPTION
+    WHEN OTHERS THEN
+        IF SQLCODE != -1031 THEN -- Ignore "link does not exist" error
+            RAISE;
+        ELSE
+            DBMS_OUTPUT.PUT_LINE('Database link eshop_muntenia_link does not exist.');
+        END IF;
+END;
+/
+
+-- Create a public database link to ESHOP_MUNTENIA_GLOBAL_LINK
+CREATE PUBLIC DATABASE LINK eshop_muntenia_global_link
+CONNECT TO eshop_global_user IDENTIFIED BY "GlobalUserPassword123!"
+USING '(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=localhost)(PORT=1521))(CONNECT_DATA=(SERVICE_NAME=ESHOP_GLOBAL)))';
