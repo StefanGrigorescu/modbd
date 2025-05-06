@@ -1,101 +1,90 @@
 SET SERVEROUTPUT ON;
 
--- Switch to ROMANIA PDB
-ALTER SESSION SET CONTAINER = eshop_romania;
+-- Switch to MUNTENIA PDB
+ALTER SESSION SET CONTAINER = eshop_muntenia;
 
 -- Set the schema to the desired user
-ALTER SESSION SET CURRENT_SCHEMA = ESHOP_ROMANIA_USER;
+ALTER SESSION SET CURRENT_SCHEMA = ESHOP_MUNTENIA_USER;
 
--- Insert users
+-- Create procedure to insert an order status
+CREATE OR REPLACE PROCEDURE INSERT_ORDER_STATUS (
+    p_status_id IN NUMBER,
+    p_status_name IN VARCHAR2
+) IS
+    status_exists_by_id NUMBER := 0;
+    status_exists_by_name NUMBER := 0;
 BEGIN
-    INSERT INTO IDNT_USERS (username, first_name, last_name, date_of_birth, phone_number) 
-    VALUES ('IonPopescu', 'Ion', 'Popescu', TO_DATE('1980-01-01', 'YYYY-MM-DD'), '0700000001');
-    INSERT INTO IDNT_USERS (username, first_name, last_name, date_of_birth, phone_number) 
-    VALUES ('MariaIonescu', 'Maria', 'Ionescu', TO_DATE('1985-02-02', 'YYYY-MM-DD'), '0700000002');
-    INSERT INTO IDNT_USERS (username, first_name, last_name, date_of_birth, phone_number) 
-    VALUES ('VasilePopa', 'Vasile', 'Popa', TO_DATE('1990-03-03', 'YYYY-MM-DD'), '0700000003');
+    -- Check if the order status ID or name already exists
+    SELECT 
+        COUNT(CASE WHEN id = p_status_id THEN 1 END), COUNT(CASE WHEN UPPER(name) = UPPER(p_status_name) THEN 1 END) 
+        INTO status_exists_by_id, status_exists_by_name
+    FROM SLS_ORDER_STATUSES;
+
+    -- Ensure both ID and name are unique
+    IF status_exists_by_id > 0 THEN
+        LOG_DEBUG('INSERT_ORDER_STATUS: Status ID ' || p_status_id || ' already exists.');
+    ELSIF status_exists_by_name > 0 THEN
+        LOG_DEBUG('INSERT_ORDER_STATUS: Status name ' || p_status_name || ' already exists.');
+    ELSE
+        -- Insert the order status if both ID and name are unique
+        INSERT INTO SLS_ORDER_STATUSES (id, name)
+        VALUES (p_status_id, p_status_name);
+        LOG_INFORMATION('INSERT_ORDER_STATUS: Status ' || p_status_name || ' with ID ' || p_status_id || ' created.');
+    END IF;
+
     COMMIT;
+EXCEPTION
+    WHEN OTHERS THEN
+        LOG_ERROR('INSERT_ORDER_STATUS: Error creating status ' || p_status_name || ': ' || SQLERRM);
+        ROLLBACK;
 END;
 /
 
--- Insert order statuses
 BEGIN
-    INSERT INTO SLS_ORDER_STATUSES (id, name) VALUES (0, 'Pending');
-    INSERT INTO SLS_ORDER_STATUSES (id, name) VALUES (1, 'Completed');
-    INSERT INTO SLS_ORDER_STATUSES (id, name) VALUES (2, 'Canceled');
-    COMMIT;
+    INSERT_ORDER_STATUS(0, 'Pending');
+    INSERT_ORDER_STATUS(1, 'Completed');
+    INSERT_ORDER_STATUS(2, 'Canceled');
 END;
 /
 
--- Insert orders
+-- Create procedure to insert an invoice status
+CREATE OR REPLACE PROCEDURE INSERT_INVOICE_STATUS (
+    p_status_id IN NUMBER,
+    p_status_name IN VARCHAR2
+) IS
+    status_exists_by_id NUMBER := 0;
+    status_exists_by_name NUMBER := 0;
 BEGIN
-    INSERT INTO SLS_ORDERS (id, customer_id, customer_region_id, address, status_id) 
-    VALUES (1, 1, 0, 'Strada Principala, Bucuresti', 0);
-    INSERT INTO SLS_ORDERS (id, customer_id, customer_region_id, address, status_id) 
-    VALUES (2, 2, 1, 'Strada Secundara, Cluj-Napoca', 1);
-    INSERT INTO SLS_ORDERS (id, customer_id, customer_region_id, address, status_id) 
-    VALUES (3, 3, 2, 'Strada Tertiar, Iasi', 2);
+    -- Check if the invoice status ID or name already exists
+    SELECT 
+        COUNT(CASE WHEN id = p_status_id THEN 1 END), COUNT(CASE WHEN UPPER(name) = UPPER(p_status_name) THEN 1 END) 
+        INTO status_exists_by_id, status_exists_by_name
+    FROM BLG_INVOICE_STATUSES;
+
+    -- Ensure both ID and name are unique
+    IF status_exists_by_id > 0 THEN
+        LOG_DEBUG('INSERT_INVOICE_STATUS: Status ID ' || p_status_id || ' already exists.');
+    ELSIF status_exists_by_name > 0 THEN
+        LOG_DEBUG('INSERT_INVOICE_STATUS: Status name ' || p_status_name || ' already exists.');
+    ELSE
+        -- Insert the invoice status if both ID and name are unique
+        INSERT INTO BLG_INVOICE_STATUSES (id, name)
+        VALUES (p_status_id, p_status_name);
+        LOG_INFORMATION('INSERT_INVOICE_STATUS: Status ' || p_status_name || ' with ID ' || p_status_id || ' created.');
+    END IF;
+
     COMMIT;
+EXCEPTION
+    WHEN OTHERS THEN
+        LOG_ERROR('INSERT_INVOICE_STATUS: Error creating status ' || p_status_name || ': ' || SQLERRM);
+        ROLLBACK;
 END;
 /
 
--- Insert order items
 BEGIN
-    INSERT INTO SLS_ORDER_ITEMS (order_id, product_id, quantity) VALUES (1, 1, 2);
-    INSERT INTO SLS_ORDER_ITEMS (order_id, product_id, quantity) VALUES (2, 2, 1);
-    INSERT INTO SLS_ORDER_ITEMS (order_id, product_id, quantity) VALUES (3, 3, 5);
-    COMMIT;
-END;
-/
-
--- Insert invoice statuses
-BEGIN
-    INSERT INTO BLG_INVOICE_STATUSES (id, name) VALUES (0, 'Pending');
-    INSERT INTO BLG_INVOICE_STATUSES (id, name) VALUES (1, 'Paid');
-    INSERT INTO BLG_INVOICE_STATUSES (id, name) VALUES (2, 'Overdue');
-    INSERT INTO BLG_INVOICE_STATUSES (id, name) VALUES (3, 'Canceled');
-    COMMIT;
-END;
-/
-
--- Insert invoices
-BEGIN
-    INSERT INTO BLG_INVOICES (id, customer_id, customer_region_id, total_discount_in_eur, status_id) 
-    VALUES (1, 1, 0, 10, 1);
-    INSERT INTO BLG_INVOICES (id, customer_id, customer_region_id, total_discount_in_eur, status_id) 
-    VALUES (2, 2, 1, 5, 0);
-    INSERT INTO BLG_INVOICES (id, customer_id, customer_region_id, total_discount_in_eur, status_id) 
-    VALUES (3, 3, 2, 0, 2);
-    COMMIT;
-END;
-/
-
--- Insert invoice items
-BEGIN
-    INSERT INTO BLG_INVOICE_ITEMS (invoice_id, product_id, product_name, product_description, product_price_in_eur, 
-                                   products_applied_discount_in_eur, products_price_after_discount_in_eur, quantity) 
-    VALUES (1, 1, 'Football Ball', 'Standard size football ball', 25, 5, 20, 2);
-    INSERT INTO BLG_INVOICE_ITEMS (invoice_id, product_id, product_name, product_description, product_price_in_eur, 
-                                   products_applied_discount_in_eur, products_price_after_discount_in_eur, quantity) 
-    VALUES (2, 2, 'Basketball Ball', 'Standard size basketball ball', 30, 5, 25, 1);
-    INSERT INTO BLG_INVOICE_ITEMS (invoice_id, product_id, product_name, product_description, product_price_in_eur, 
-                                   products_applied_discount_in_eur, products_price_after_discount_in_eur, quantity) 
-    VALUES (3, 3, 'Tennis Racket', 'Professional tennis racket', 75, 0, 75, 5);
-    COMMIT;
-END;
-/
-
--- Insert invoice bundles
-BEGIN
-    INSERT INTO BLG_INVOICE_BUNDLES (invoice_id, bundle_id, bundle_price_in_eur, bundles_applied_discount_in_eur, 
-                                     bundles_price_after_discount_in_eur, quantity) 
-    VALUES (1, 1, 100, 10, 90, 1);
-    INSERT INTO BLG_INVOICE_BUNDLES (invoice_id, bundle_id, bundle_price_in_eur, bundles_applied_discount_in_eur, 
-                                     bundles_price_after_discount_in_eur, quantity) 
-    VALUES (2, 2, 200, 20, 180, 2);
-    INSERT INTO BLG_INVOICE_BUNDLES (invoice_id, bundle_id, bundle_price_in_eur, bundles_applied_discount_in_eur, 
-                                     bundles_price_after_discount_in_eur, quantity) 
-    VALUES (3, 3, 300, 30, 270, 3);
-    COMMIT;
+    INSERT_INVOICE_STATUS(0, 'Pending');
+    INSERT_INVOICE_STATUS(1, 'Paid');
+    INSERT_INVOICE_STATUS(2, 'Overdue');
+    INSERT_INVOICE_STATUS(3, 'Canceled');
 END;
 /
