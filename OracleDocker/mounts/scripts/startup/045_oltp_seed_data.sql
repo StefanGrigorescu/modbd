@@ -1561,3 +1561,116 @@ BEGIN
     INSERT_INVOICE_STATUS(3, 'Canceled');
 END;
 /
+
+
+
+CREATE OR REPLACE PROCEDURE PLACE_ORDER (
+    p_customer_id IN NUMBER,
+    p_address IN NVARCHAR2 DEFAULT NULL,
+    p_items_csv IN NVARCHAR2
+) IS
+    customer_region_id NUMBER;
+    order_id NUMBER;
+    final_address NVARCHAR2(850);
+    status_id NUMBER := 0; -- Default status ID for "Pending"
+BEGIN
+    -- Query the customer's region ID and address if not provided
+    IF p_address IS NULL THEN
+        SELECT region_id, 
+               NVL((SELECT street || ', ' || str_number || ', ' || postal_code || ', ' || other_details
+                    FROM IDNT_USER_ADDRESSES
+                    WHERE user_id = p_customer_id
+                    FETCH FIRST 1 ROWS ONLY), 'No Address') 
+        INTO customer_region_id, final_address
+        FROM IDNT_USERS
+        WHERE id = p_customer_id;
+    ELSE
+        SELECT region_id INTO customer_region_id
+        FROM IDNT_USERS
+        WHERE id = p_customer_id;
+        final_address := p_address;
+    END IF;
+
+    -- Insert the order into SLS_Orders
+    INSERT INTO SLS_ORDERS (
+        customer_id, customer_region_id, address, status_id
+    ) VALUES (
+        p_customer_id, customer_region_id, final_address, status_id
+    ) RETURNING id INTO order_id;
+
+    -- Process the items CSV
+    FOR item IN (
+        SELECT REGEXP_SUBSTR(p_items_csv, '[^,]+', 1, LEVEL) AS item
+        FROM DUAL
+        CONNECT BY REGEXP_SUBSTR(p_items_csv, '[^,]+', 1, LEVEL) IS NOT NULL
+    ) LOOP
+        DECLARE
+            product_id NUMBER;
+            quantity NUMBER;
+        BEGIN
+            -- Parse product_id and quantity from the item string
+            SELECT TO_NUMBER(REGEXP_SUBSTR(item.item, '^[^x]+')),
+                   TO_NUMBER(REGEXP_SUBSTR(item.item, '[^x]+$'))
+            INTO product_id, quantity
+            FROM DUAL;
+
+            -- Insert the item into SLS_Order_Items
+            INSERT INTO SLS_ORDER_ITEMS (
+                order_id, product_id, quantity
+            ) VALUES (
+                order_id, product_id, quantity
+            );
+        EXCEPTION
+            WHEN OTHERS THEN
+                LOG_ERROR('PLACE_ORDER: Error processing item ' || item.item || ': ' || SQLERRM);
+        END;
+    END LOOP;
+
+    -- Commit the transaction
+    COMMIT;
+
+    LOG_INFORMATION('PLACE_ORDER: Order ' || order_id || ' placed successfully for customer ID ' || p_customer_id || '.');
+EXCEPTION
+    WHEN OTHERS THEN
+        ROLLBACK;
+        LOG_ERROR('PLACE_ORDER: Error placing order for customer ID ' || p_customer_id || ': ' || SQLERRM);
+END;
+/
+
+BEGIN
+    -- Order 1
+    PLACE_ORDER(
+        p_customer_id => 1, -- Replace with a valid customer ID
+        p_address => NULL, -- Use the default address
+        p_items_csv => '1x2,2x1,3x5' -- Product ID 1 with quantity 2, Product ID 2 with quantity 1, Product ID 3 with quantity 5
+    );
+
+    -- Order 2
+    PLACE_ORDER(
+        p_customer_id => 2, -- Replace with a valid customer ID
+        p_address => 'Custom Address, Street 123, City, Postal Code', -- Custom address
+        p_items_csv => '4x1,5x3' -- Product ID 4 with quantity 1, Product ID 5 with quantity 3
+    );
+
+    -- Order 3
+    PLACE_ORDER(
+        p_customer_id => 3, -- Replace with a valid customer ID
+        p_address => NULL, -- Use the default address
+        p_items_csv => '6x2,7x4,8x1' -- Product ID 6 with quantity 2, Product ID 7 with quantity 4, Product ID 8 with quantity 1
+    );
+
+    -- Order 4
+    PLACE_ORDER(
+        p_customer_id => 4, -- Replace with a valid customer ID
+        p_address => NULL, -- Use the default address
+        p_items_csv => '9x3,10x2' -- Product ID 9 with quantity 3, Product ID 10 with quantity 2
+    );
+
+    -- Order 5
+    PLACE_ORDER(
+        p_customer_id => 5, -- Replace with a valid customer ID
+        p_address => 'Another Custom Address, Street 456, City, Postal Code', -- Custom address
+        p_items_csv => '11x1,12x2,13x3' -- Product ID 11 with quantity 1, Product ID 12 with quantity 2, Product ID 13 with quantity 3
+    );
+END;
+/

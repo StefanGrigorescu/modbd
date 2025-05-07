@@ -176,3 +176,24 @@ BEGIN
     LOG_INFORMATION('Finished creating tables.', 'muntenia_create_tables');
 END;
 /
+
+DECLARE
+    table_exists NUMBER := 0;
+BEGIN
+    -- Check if the table exists
+    SELECT COUNT(*)
+    INTO table_exists
+    FROM USER_TABLES
+    WHERE TABLE_NAME = 'SLS_ORDERS_MUNTENIA';
+
+    -- If the table does not exist, create it
+    IF table_exists = 0 THEN
+        EXECUTE IMMEDIATE '
+            CREATE TABLE SLS_ORDERS_MUNTENIA AS 
+            SELECT *
+            FROM SLS_ORDERS@eshop_oltp_link
+            WHERE customer_region_id = 0
+        ';
+    END IF;
+END;
+/
