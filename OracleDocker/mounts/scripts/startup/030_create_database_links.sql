@@ -38,6 +38,27 @@ CREATE PUBLIC DATABASE LINK eshop_muntenia_link
 CONNECT TO eshop_muntenia_user IDENTIFIED BY "MunteniaUserPassword123!"
 USING '(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=localhost)(PORT=1521))(CONNECT_DATA=(SERVICE_NAME=ESHOP_MUNTENIA)))';
 
+
+-- drop the database link if it already exists
+BEGIN
+    EXECUTE IMMEDIATE 'DROP PUBLIC DATABASE LINK eshop_oltp_link';
+    DBMS_OUTPUT.PUT_LINE('Dropped database link: eshop_oltp_link');
+EXCEPTION
+    WHEN OTHERS THEN
+        IF SQLCODE != -1031 THEN -- Ignore "link does not exist" error
+            RAISE;
+        ELSE
+            DBMS_OUTPUT.PUT_LINE('Database link eshop_oltp_link does not exist.');
+        END IF;
+END;
+/
+
+-- create a public database link to oltp
+CREATE PUBLIC DATABASE LINK eshop_oltp_link
+CONNECT TO eshop_oltp_user IDENTIFIED BY "oltp_password"
+USING '(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=localhost)(PORT=1521))(CONNECT_DATA=(SERVICE_NAME=ESHOP_OLTP)))';
+
+
 -- Switch to ROMANIA PDB
 ALTER SESSION SET CONTAINER = eshop_romania;
 

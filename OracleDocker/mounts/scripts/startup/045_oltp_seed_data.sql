@@ -1819,6 +1819,7 @@ CREATE OR REPLACE PROCEDURE Pay_Order (
 ) IS
     -- Variables to hold order data
     v_customer_id NUMBER;
+    v_customer_region_id NUMBER;
     v_order_exists NUMBER := 0;
 
 BEGIN
@@ -1837,17 +1838,17 @@ BEGIN
     END IF;
 
     -- Retrieve order data
-    SELECT customer_id
-    INTO v_customer_id
+    SELECT customer_id, customer_region_id
+    INTO v_customer_id, v_customer_region_id
     FROM SLS_ORDERS
     WHERE id = p_order_id;
 
     -- Create the invoice
     BEGIN
         INSERT INTO BLG_INVOICES (
-            id, customer_id, status_id, created_on, total_discount_in_eur
+            id, customer_id, customer_region_id, status_id, created_on, total_discount_in_eur
         ) VALUES (
-            p_order_id, v_customer_id, 1, p_now, 0
+            p_order_id, v_customer_id, v_customer_region_id , 1, p_now, 0
         );
     EXCEPTION
         WHEN OTHERS THEN

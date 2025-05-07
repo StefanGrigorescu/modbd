@@ -376,6 +376,7 @@ BEGIN
     TRY_CREATE_TABLE('BLG_INVOICES', ' 
         id NUMBER PRIMARY KEY,
         customer_id NUMBER NOT NULL,
+        customer_region_id NUMBER NOT NULL,
         total_discount_in_eur NUMBER(10, 2) DEFAULT 0,
         status_id NUMBER NOT NULL,
         created_on DATE DEFAULT SYSDATE NOT NULL,
