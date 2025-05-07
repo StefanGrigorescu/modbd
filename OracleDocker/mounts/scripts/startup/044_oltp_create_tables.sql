@@ -37,7 +37,7 @@ BEGIN
         )';
         LOG_INFORMATION('TRY_CREATE_TABLE: Table ' || tbl_name || ' created.', created_by);
     ELSE
-        LOG_INFORMATION('TRY_CREATE_TABLE: Table ' || tbl_name || ' already exists.', created_by);
+        LOG_DEBUG('TRY_CREATE_TABLE: Table ' || tbl_name || ' already exists.', created_by);
     END IF;
 EXCEPTION
     WHEN OTHERS THEN

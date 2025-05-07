@@ -1740,7 +1740,7 @@ BEGIN
     IF is_success = 1 THEN
         LOG_INFORMATION('Seed_Order: Order ' || p_order_id || ' successfully placed for customer ID ' || p_customer_id || '.');
     ELSE
-        LOG_ERROR('Seed_Order: Failed to place order for customer ID ' || p_customer_id || '.');
+        LOG_WARNING('Seed_Order: Failed to place order for customer ID ' || p_customer_id || '.');
     END IF;
 EXCEPTION
     WHEN OTHERS THEN
