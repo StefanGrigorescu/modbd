@@ -433,3 +433,12 @@ BEGIN
     LOG_INFORMATION('Finished creating tables.', 'oltp_create_tables');
 END;
 /
+
+
+CREATE OR REPLACE VIEW IDNT_CUSTOMERS AS
+    SELECT u.*
+    FROM IDNT_USERS u
+    LEFT OUTER JOIN IDNT_USER_ROLES ur 
+        ON u.id = ur.user_id
+    WHERE ur.user_id IS NULL;
+/

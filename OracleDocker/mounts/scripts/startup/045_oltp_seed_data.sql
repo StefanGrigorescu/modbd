@@ -1563,114 +1563,243 @@ END;
 /
 
 
-
-CREATE OR REPLACE PROCEDURE PLACE_ORDER (
+CREATE OR REPLACE PROCEDURE New_Order_Id (
     p_customer_id IN NUMBER,
-    p_address IN NVARCHAR2 DEFAULT NULL,
-    p_items_csv IN NVARCHAR2
+    p_now IN TIMESTAMP,
+    p_random IN NUMBER,
+    p_order_id OUT NUMBER
 ) IS
     customer_region_id NUMBER;
-    order_id NUMBER;
-    final_address NVARCHAR2(850);
-    status_id NUMBER := 0; -- Default status ID for "Pending"
 BEGIN
-    -- Query the customer's region ID and address if not provided
-    IF p_address IS NULL THEN
-        SELECT region_id, 
-               NVL((SELECT street || ', ' || str_number || ', ' || postal_code || ', ' || other_details
-                    FROM IDNT_USER_ADDRESSES
-                    WHERE user_id = p_customer_id
-                    FETCH FIRST 1 ROWS ONLY), 'No Address') 
-        INTO customer_region_id, final_address
-        FROM IDNT_USERS
-        WHERE id = p_customer_id;
-    ELSE
-        SELECT region_id INTO customer_region_id
-        FROM IDNT_USERS
-        WHERE id = p_customer_id;
-        final_address := p_address;
-    END IF;
+    -- Retrieve the region_id for the customer
+    SELECT region_id INTO customer_region_id
+    FROM IDNT_USERS
+    WHERE id = p_customer_id;
 
-    -- Insert the order into SLS_Orders
-    INSERT INTO SLS_ORDERS (
-        customer_id, customer_region_id, address, status_id
-    ) VALUES (
-        p_customer_id, customer_region_id, final_address, status_id
-    ) RETURNING id INTO order_id;
-
-    -- Process the items CSV
-    FOR item IN (
-        SELECT REGEXP_SUBSTR(p_items_csv, '[^,]+', 1, LEVEL) AS item
-        FROM DUAL
-        CONNECT BY REGEXP_SUBSTR(p_items_csv, '[^,]+', 1, LEVEL) IS NOT NULL
-    ) LOOP
-        DECLARE
-            product_id NUMBER;
-            quantity NUMBER;
-        BEGIN
-            -- Parse product_id and quantity from the item string
-            SELECT TO_NUMBER(REGEXP_SUBSTR(item.item, '^[^x]+')),
-                   TO_NUMBER(REGEXP_SUBSTR(item.item, '[^x]+$'))
-            INTO product_id, quantity
-            FROM DUAL;
-
-            -- Insert the item into SLS_Order_Items
-            INSERT INTO SLS_ORDER_ITEMS (
-                order_id, product_id, quantity
-            ) VALUES (
-                order_id, product_id, quantity
-            );
-        EXCEPTION
-            WHEN OTHERS THEN
-                LOG_ERROR('PLACE_ORDER: Error processing item ' || item.item || ': ' || SQLERRM);
-        END;
-    END LOOP;
-
-    -- Commit the transaction
-    COMMIT;
-
-    LOG_INFORMATION('PLACE_ORDER: Order ' || order_id || ' placed successfully for customer ID ' || p_customer_id || '.');
+    -- Generate the order ID in the format "{year:4}{month:2}{day:2}{customer_region_id:2}{random:12}"
+    p_order_id := TO_NUMBER(
+        TO_CHAR(p_now, 'YYYYMMDD') || 
+        LPAD(customer_region_id, 2, '0') || 
+        LPAD(p_random, 12, '0')
+    );
 EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        p_order_id := NULL; -- If customer_id is invalid, return NULL
+        LOG_ERROR('New_Order_Id: Invalid customer_id ' || p_customer_id);
     WHEN OTHERS THEN
-        ROLLBACK;
-        LOG_ERROR('PLACE_ORDER: Error placing order for customer ID ' || p_customer_id || ': ' || SQLERRM);
+        p_order_id := NULL;
+        LOG_ERROR('New_Order_Id: Error generating order ID: ' || SQLERRM);
 END;
 /
 
+CREATE OR REPLACE PROCEDURE PLACE_ORDER (
+    p_order_id IN NUMBER,
+    p_customer_id IN NUMBER,
+    p_address IN NVARCHAR2 DEFAULT NULL,
+    p_items_csv IN NVARCHAR2,
+    is_success OUT NUMBER,
+    p_created_on IN TIMESTAMP DEFAULT SYSTIMESTAMP
+) IS
+    customer_region_id NUMBER;
+    final_address NVARCHAR2(850);
+    order_exists NUMBER := 0;
 BEGIN
-    -- Order 1
-    PLACE_ORDER(
-        p_customer_id => 1, -- Replace with a valid customer ID
-        p_address => NULL, -- Use the default address
-        p_items_csv => '1x2,2x1,3x5' -- Product ID 1 with quantity 2, Product ID 2 with quantity 1, Product ID 3 with quantity 5
+    -- Check if the order_id already exists
+    SELECT COUNT(*) INTO order_exists
+    FROM SLS_ORDERS
+    WHERE id = p_order_id;
+
+    IF order_exists > 0 THEN
+        -- If order_id exists, set is_success to false (0)
+        is_success := 0;
+        LOG_DEBUG('Place_Order: Could not place order ' || p_order_id || ' for customer ID ' || p_customer_id || '. Order ID already exists.');
+    ELSE
+        -- Query the customer's region ID and address if not provided
+        IF p_address IS NULL THEN
+            SELECT region_id, 
+                NVL((SELECT street || ', ' || str_number || ', ' || postal_code || ', ' || other_details
+                        FROM IDNT_USER_ADDRESSES
+                        WHERE user_id = p_customer_id
+                        FETCH FIRST 1 ROWS ONLY), 'No Address') 
+            INTO customer_region_id, final_address
+            FROM IDNT_USERS
+            WHERE id = p_customer_id;
+        ELSE
+            SELECT region_id INTO customer_region_id
+            FROM IDNT_USERS
+            WHERE id = p_customer_id;
+            final_address := p_address;
+        END IF;
+
+        -- Insert the order into SLS_Orders
+        INSERT INTO SLS_ORDERS (
+            id, customer_id, customer_region_id, address, status_id, created_on
+        ) VALUES (
+                                                                        -- Default status ID for "Pending"
+            p_order_id, p_customer_id, customer_region_id, final_address, 0, p_created_on
+        );
+
+        -- Process the items CSV
+        FOR item IN (
+            SELECT REGEXP_SUBSTR(p_items_csv, '[^,]+', 1, LEVEL) AS item
+            FROM DUAL
+            CONNECT BY REGEXP_SUBSTR(p_items_csv, '[^,]+', 1, LEVEL) IS NOT NULL
+        ) LOOP
+            DECLARE
+                product_id NUMBER;
+                quantity NUMBER;
+            BEGIN
+                -- Parse product_id and quantity from the item string
+                SELECT TO_NUMBER(REGEXP_SUBSTR(item.item, '^[^x]+')),
+                    TO_NUMBER(REGEXP_SUBSTR(item.item, '[^x]+$'))
+                INTO product_id, quantity
+                FROM DUAL;
+
+                -- Insert the item into SLS_Order_Items
+                INSERT INTO SLS_ORDER_ITEMS (
+                    order_id, product_id, quantity
+                ) VALUES (
+                    p_order_id, product_id, quantity
+                );
+            EXCEPTION
+                WHEN OTHERS THEN
+                    LOG_ERROR('PLACE_ORDER: Error placing order ' || p_order_id || ' for customer ID ' || p_customer_id || '. Could not add item ' || item.item || ': ' || SQLERRM);
+            END;
+        END LOOP;
+        
+        COMMIT;
+
+        -- Set is_success to true (1)
+        is_success := 1;
+        LOG_INFORMATION('Place_Order: Order ' || p_order_id || ' placed successfully for customer ID ' || p_customer_id || '.');
+    END IF;
+EXCEPTION
+    WHEN OTHERS THEN
+        ROLLBACK;
+        is_success := 0;
+        LOG_ERROR('PLACE_ORDER: Error placing order ' || p_order_id || ' for customer ID ' || p_customer_id || ': ' || SQLERRM);
+END;
+/
+
+CREATE OR REPLACE PROCEDURE Seed_Order (
+    p_customer_id_offset IN NUMBER,
+    p_now IN TIMESTAMP,
+    p_random IN NUMBER,
+    p_order_id OUT NUMBER,
+    p_address IN NVARCHAR2 DEFAULT NULL,
+    p_items_csv IN NVARCHAR2,
+    is_success OUT NUMBER
+) IS
+    p_customer_id NUMBER;
+BEGIN
+    -- Select the p_customer_id_offset-th customer without roles
+    BEGIN
+        SELECT id
+        INTO p_customer_id
+        FROM (
+            SELECT 
+                c.id, 
+                ROW_NUMBER() OVER (ORDER BY c.id) AS row_num
+            FROM IDNT_CUSTOMERS c
+        )
+        WHERE row_num = p_customer_id_offset;
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            -- Log error and set is_success to false if no customer is found
+            LOG_ERROR('Seed_Order: No customer found with offset ' || p_customer_id_offset || '.');
+            is_success := 0;
+            RETURN;
+    END;
+
+    -- Generate a new order ID
+    New_Order_Id(
+        p_customer_id => p_customer_id,
+        p_now => p_now,
+        p_random => p_random,
+        p_order_id => p_order_id
     );
 
-    -- Order 2
-    PLACE_ORDER(
-        p_customer_id => 2, -- Replace with a valid customer ID
-        p_address => 'Custom Address, Street 123, City, Postal Code', -- Custom address
-        p_items_csv => '4x1,5x3' -- Product ID 4 with quantity 1, Product ID 5 with quantity 3
+    -- Place the order
+    Place_Order(
+        p_order_id => p_order_id,
+        p_customer_id => p_customer_id,
+        p_address => p_address,
+        p_items_csv => p_items_csv,
+        is_success => is_success,
+        p_created_on => p_now
     );
 
-    -- Order 3
-    PLACE_ORDER(
-        p_customer_id => 3, -- Replace with a valid customer ID
-        p_address => NULL, -- Use the default address
-        p_items_csv => '6x2,7x4,8x1' -- Product ID 6 with quantity 2, Product ID 7 with quantity 4, Product ID 8 with quantity 1
-    );
+    -- Log success or failure
+    IF is_success = 1 THEN
+        LOG_INFORMATION('Seed_Order: Order ' || p_order_id || ' successfully placed for customer ID ' || p_customer_id || '.');
+    ELSE
+        LOG_ERROR('Seed_Order: Failed to place order for customer ID ' || p_customer_id || '.');
+    END IF;
+EXCEPTION
+    WHEN OTHERS THEN
+        LOG_ERROR('Seed_Order: Error occurred: ' || SQLERRM);
+        is_success := 0;
+END;
+/
 
-    -- Order 4
-    PLACE_ORDER(
-        p_customer_id => 4, -- Replace with a valid customer ID
-        p_address => NULL, -- Use the default address
-        p_items_csv => '9x3,10x2' -- Product ID 9 with quantity 3, Product ID 10 with quantity 2
-    );
+DECLARE
+    p_order_id NUMBER;
+    is_success NUMBER;
+    p_now TIMESTAMP;
+    p_random NUMBER := 0;
+    p_customer_id_offset NUMBER;
+    p_address NVARCHAR2(255);
+    p_items_csv NVARCHAR2(255);
+    customers_count NUMBER;    
 
-    -- Order 5
-    PLACE_ORDER(
-        p_customer_id => 5, -- Replace with a valid customer ID
-        p_address => 'Another Custom Address, Street 456, City, Postal Code', -- Custom address
-        p_items_csv => '11x1,12x2,13x3' -- Product ID 11 with quantity 1, Product ID 12 with quantity 2, Product ID 13 with quantity 3
+    -- Fibonacci sequence for customer offsets
+    fibonacci_offsets CONSTANT SYS.ODCINUMBERLIST := SYS.ODCINUMBERLIST(
+        1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584, 4181, 6765, 10946, 17711, 28657, 46368, 75025, 121393, 196418, 317811, 514229, 832040, 1346269, 2178309, 3524578, 5702887, 9227465, 14930352, 24157817, 39088169, 63245986, 102334155, 165580141, 267914296, 433494437, 701408733, 1134903170, 1836311903, 
+        2971215073, 4807526976, 7778742049, 12586269025, 20365011074, 32951280099, 53316291173, 86267571272, 139583862445, 225851433717, 365435296162, 591286729879, 956722026041, 1548008755920, 2504730781961, 4052739537881, 6557470319842, 10610209857723, 17167680177565, 27777890035288, 44945570212853, 72723460248141, 117669030460994
     );
+BEGIN
+    -- Set a deterministic seed for DBMS_RANDOM
+    DBMS_RANDOM.SEED(402);
+
+    -- Query the total number of customers
+    SELECT COUNT(*) 
+    INTO customers_count 
+    FROM IDNT_CUSTOMERS;
+
+    -- Loop through 50 seed orders
+    FOR i IN 1..690 LOOP
+        -- Determine the customer offset (repeat each offset 15 times, modulo customers_count to avoid overflow)
+        p_customer_id_offset := MOD(fibonacci_offsets(CEIL(i / 15)), customers_count) + 1;
+
+        -- Generate deterministic p_now (start from January 2024, incrementing randomly)
+        p_now := TO_TIMESTAMP('2024-01-01 00:00:00', 'YYYY-MM-DD HH24:MI:SS') + (i * DBMS_RANDOM.VALUE(3, 40));
+
+        -- Randomly decide whether to use a specific address (1 in 10 chance)
+        IF MOD(i, 10) = 0 THEN
+            p_address := 'Strada Fictiva ' || i || ', Oras, Romania';
+        ELSE
+            p_address := NULL;
+        END IF;
+
+        -- Generate realistic order items (random product IDs and quantities)
+        p_items_csv := 
+            TO_CHAR(TRUNC(DBMS_RANDOM.VALUE(1, 100))) || 'x' || TO_CHAR(TRUNC(DBMS_RANDOM.VALUE(1, 5))) || ',' ||
+            TO_CHAR(TRUNC(DBMS_RANDOM.VALUE(1, 100))) || 'x' || TO_CHAR(TRUNC(DBMS_RANDOM.VALUE(1, 3))) || ',' ||
+            TO_CHAR(TRUNC(DBMS_RANDOM.VALUE(1, 100))) || 'x' || TO_CHAR(TRUNC(DBMS_RANDOM.VALUE(1, 2)));
+
+        -- Call the Seed_Order procedure
+        Seed_Order(
+            p_customer_id_offset => p_customer_id_offset,
+            p_now => p_now,
+            p_random => p_random,
+            p_order_id => p_order_id,
+            p_address => p_address,
+            p_items_csv => p_items_csv,
+            is_success => is_success
+        );
+
+        -- Increment the random seed for the next order
+        p_random := p_random + 1;
+    END LOOP;
 END;
 /
