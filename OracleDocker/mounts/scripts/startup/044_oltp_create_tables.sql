@@ -37,7 +37,7 @@ BEGIN
         )';
         LOG_INFORMATION('TRY_CREATE_TABLE: Table ' || tbl_name || ' created.', created_by);
     ELSE
-        LOG_INFORMATION('TRY_CREATE_TABLE: Table ' || tbl_name || ' already exists.', created_by);
+        LOG_DEBUG('TRY_CREATE_TABLE: Table ' || tbl_name || ' already exists.', created_by);
     END IF;
 EXCEPTION
     WHEN OTHERS THEN
@@ -376,6 +376,7 @@ BEGIN
     TRY_CREATE_TABLE('BLG_INVOICES', ' 
         id NUMBER PRIMARY KEY,
         customer_id NUMBER NOT NULL,
+        customer_region_id NUMBER NOT NULL,
         total_discount_in_eur NUMBER(10, 2) DEFAULT 0,
         status_id NUMBER NOT NULL,
         created_on DATE DEFAULT SYSDATE NOT NULL,
@@ -432,4 +433,13 @@ BEGIN
     
     LOG_INFORMATION('Finished creating tables.', 'oltp_create_tables');
 END;
+/
+
+
+CREATE OR REPLACE VIEW IDNT_CUSTOMERS AS
+    SELECT u.*
+    FROM IDNT_USERS u
+    LEFT OUTER JOIN IDNT_USER_ROLES ur 
+        ON u.id = ur.user_id
+    WHERE ur.user_id IS NULL;
 /
