@@ -47,8 +47,7 @@ public static class CreateUid
     public static string FromName(
         string name,
         IReadOnlyList<EntityId<string>> previouslyCreatedIds
-    )
-    {
+    ) {
         NormalizedText normalizedName = NormalizedText.From(name);
 
         char firstLetter = normalizedName.Value[0];
@@ -65,8 +64,7 @@ public static class CreateUid
         char firstLetter,
         string remainingLetters,
         IReadOnlyList<EntityId<string>> previouslyCreatedIds
-    )
-    {
+    ) {
         string id = remainingLetters.Length >= 2 ?
             $"{firstLetter}{remainingLetters.Substring(0, 2)}" :    // Get the first two remaining letters
             $"{firstLetter}{remainingLetters.PadRight(2, '0')}";    // or pad with zeroes if there are not two remaining letters

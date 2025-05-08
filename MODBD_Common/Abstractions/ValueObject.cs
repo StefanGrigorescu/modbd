@@ -1,12 +1,12 @@
-﻿using MODBD_Common.NullableTypes;
-using System.Diagnostics;
+﻿using System.Diagnostics;
+using MODBD_Common.NullableTypes;
 
 namespace MODBD_Common.Abstractions;
 
 [DebuggerDisplay("{Value}")]
-public abstract class ValueObject<TValue> :
-    IEquatable<ValueObject<TValue>>,
-    IEquatable<TValue>,
+public abstract class ValueObject<TValue> : 
+    IEquatable<ValueObject<TValue>>, 
+    IEquatable<TValue>, 
     IImmutable<ValueObject<TValue>>,
     IImmutable<TValue>,
     IComparable<ValueObject<TValue>>,
@@ -28,26 +28,17 @@ public abstract class ValueObject<TValue> :
         EqualityComparer<TValue>.Default.Equals(Value, other);
 
     public override bool Equals(object? obj) =>
-        obj is not null &&
         obj is ValueObject<TValue> other &&
         ((IEquatable<ValueObject<TValue>>)this).Equals(other);
 
-    public static bool operator ==(ValueObject<TValue> left, ValueObject<TValue> right)
-    {
-        if ((object?)left is null && (object?)right is null)
-        {
-            return true;
-        }
+    public static bool operator ==(ValueObject<TValue>? left, ValueObject<TValue>? right) =>
+        (left is null && right is null) || (
+            left is not null && 
+            right is not null && 
+            left.Equals(right)
+        );
 
-        if ((object?)left is null || (object?)right is null)
-        {
-            return false;
-        }
-
-        return left.Equals(right);
-    }
-
-    public static bool operator !=(ValueObject<TValue> left, ValueObject<TValue> right) =>
+    public static bool operator !=(ValueObject<TValue>? left, ValueObject<TValue>? right) =>
         !(left == right);
 
     public override int GetHashCode() =>
@@ -70,7 +61,7 @@ public abstract class ValueObject<TValue> :
 }
 
 
-public abstract class NullableValueObject<TValue> :
+public abstract class NullableValueObject<TValue> : 
     IEquatable<NullableValueObject<TValue>>,
     IEquatable<TValue>,
     IImmutable<NullableValueObject<TValue>>,
@@ -84,12 +75,12 @@ public abstract class NullableValueObject<TValue> :
     public static implicit operator TValue?(NullableValueObject<TValue> valueObject) => valueObject.Value;
 
     public TOut Match<TOut>(
-        Func<TValue, TOut> whenIsNotNull,
-        Func<TOut> whenIsNull
+        Func<TValue, TOut> onNotNull,
+        Func<TOut> onNull
     ) => Value switch
     {
-        null => whenIsNull(),
-        _ => whenIsNotNull(Value)
+        null => onNull(),
+        _ => onNotNull(Value)
     };
 
     public bool Equals(NullableValueObject<TValue>? other) =>
@@ -98,33 +89,24 @@ public abstract class NullableValueObject<TValue> :
         EqualityComparer<TValue>.Default.Equals(Value, other.Value);
 
     public bool Equals(TValue? other) =>
-        other is null &&
-        Value is null ||
-        other is not null &&
+        (other is null && 
+        Value is null) ||
+        (other is not null &&
         GetType() == other.GetType() &&
-        EqualityComparer<TValue>.Default.Equals(Value, other);
+        EqualityComparer<TValue>.Default.Equals(Value, other));
 
     public override bool Equals(object? obj) =>
-        obj is not null &&
         obj is ValueObject<TValue> other &&
         ((IEquatable<ValueObject<TValue>>)this).Equals(other);
 
-    public static bool operator ==(NullableValueObject<TValue> left, NullableValueObject<TValue> right)
-    {
-        if ((object?)left is null && (object?)right is null)
-        {
-            return true;
-        }
+    public static bool operator ==(NullableValueObject<TValue>? left, NullableValueObject<TValue>? right) =>
+        (left is null && right is null) || (
+            left is not null &&
+            right is not null &&
+            left.Equals(right)
+        );
 
-        if ((object?)left is null || (object?)right is null)
-        {
-            return false;
-        }
-
-        return left.Equals(right);
-    }
-
-    public static bool operator !=(NullableValueObject<TValue> left, NullableValueObject<TValue> right) =>
+    public static bool operator !=(NullableValueObject<TValue>? left, NullableValueObject<TValue>? right) =>
         !(left == right);
 
     public override int GetHashCode() =>
@@ -132,22 +114,22 @@ public abstract class NullableValueObject<TValue> :
 
     public int CompareTo(NullableValueObject<TValue>? other)
     {
-        if (other is null)
+        if(other is null)
         {
             return CompareToResult.WhenOtherIsNull;
         }
 
-        if (Value is null && other.Value is null)
+        if(Value is null && other.Value is null)
         {
             return 0;
         }
 
-        if (other.Value is null)
+        if(other.Value is null)
         {
             return CompareToResult.WhenOtherIsNull;
         }
 
-        if (Value is null)
+        if(Value is null)
         {
             return CompareToResult.WhenThisIsNull;
         }

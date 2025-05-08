@@ -1,0 +1,28 @@
+<mat-form-field [appearance]="appearance">
+    <mat-label *ngIf="fieldTitle">
+        {{fieldTitle}}
+    </mat-label>
+    <input
+        matInput
+        [formControl]="control"
+        (blur)="updateValidationMessage()"
+        [name]="inputName"
+        [placeholder]="placeholder"
+        type="text"
+        [autocomplete]="autocomplete"
+    />
+    <mat-error *ngIf="validationMessage">
+        {{ validationMessage ?? 'Invalid input!' }}
+    </mat-error>
+
+    <button
+        *ngIf="!!suffixButton"
+        matSuffix
+        type="button"
+        role="button"
+        class="same-line app-button btn-primary small-button suffix-button"
+        (click)="$event.stopPropagation(); suffixButton.onClick()"
+    >
+        {{suffixButton.text}}
+    </button>
+</mat-form-field>

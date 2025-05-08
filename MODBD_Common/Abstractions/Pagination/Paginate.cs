@@ -33,7 +33,7 @@ public static class PaginateEntities
         PaginatedEntitiesQuery<TEntity> pagination
     ) where TEntity : IEntity
     {
-        if (pagination.PreviousFilter is null)
+        if(pagination.PreviousFilter is null)
         {
             return query;
         }
@@ -44,7 +44,7 @@ public static class PaginateEntities
         ConstantExpression previousFilter = Expression.Constant(pagination.PreviousFilter.Value, typeof(DateTime));
 
         // Construct the predicate dynamically
-        Expression predicate = pagination.SortingDirection == SortingDirection.Ascending ?
+        Expression predicate = pagination.SortingDirection == SortingDirection.Ascending  ?
             Expression.GreaterThan(entityProperty, previousFilter) :
             Expression.LessThan(entityProperty, previousFilter);
 

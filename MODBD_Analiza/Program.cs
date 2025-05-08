@@ -4,7 +4,7 @@ using MODBD_Core.EShop;
 using MODBD_Core.IO;
 
 ConsoleOutput output = new();
-//FileOutput output = new("analiza.txt");
+//using FileOutput output = new("analiza.txt");
 
 output.WriteLine("Hello, World!\n");
 

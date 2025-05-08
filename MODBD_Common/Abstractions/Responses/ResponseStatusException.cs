@@ -6,7 +6,7 @@ public sealed class ResponseStatusException : ValueObjectException
 {
     public static T ThrowIfIsNotSucceeded<T>(AppResponse<T> response)
     {
-        if (!response.TryGetData(out T? data))
+        if(!response.TryGetData(out T? data))
         {
             throw ExpectedSucceeded;
         }

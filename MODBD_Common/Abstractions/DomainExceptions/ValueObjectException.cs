@@ -19,10 +19,9 @@ public class ValueObjectException : Exception
 
     public static T TryReturnResultOrThrowIfCaughtException<T>(
         Func<T> funcThatMightThrowValueObjectException,
-        Func<ValueObjectException, string> outerExceptionMessageFactory,
+        Func<ValueObjectException, string> outerExceptionMessageFactory, 
         [CallerMemberName] string caller = "caller"
-    )
-    {
+    ) {
         try
         {
             return funcThatMightThrowValueObjectException();

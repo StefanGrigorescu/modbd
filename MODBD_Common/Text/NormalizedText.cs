@@ -8,10 +8,20 @@ public sealed class NormalizedText : Text
         Value.Contains(
             ToNormalized(other));
 
-    public static NormalizedText From(string text) => new()
+    public static readonly NormalizedText Empty = new() { Value = string.Empty, };
+
+    public static NormalizedText From(string text)
     {
-        Value = ToNormalized(text),
-    };
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return Empty;
+        }
+
+        string normalizedText = ToNormalized(text);
+        return string.IsNullOrWhiteSpace(normalizedText) ? 
+            Empty : 
+            new() { Value = normalizedText, };
+    }
 
     public static string ToNormalized(string text)
     {

@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics.CodeAnalysis;
-using MODBD_Common.Collections;
 using MODBD_Common.Abstractions.DomainExceptions;
+using MODBD_Common.Collections;
 
 namespace MODBD_Common.Abstractions.Responses;
 
@@ -19,8 +19,13 @@ public sealed record AppResponse<T>
     [MemberNotNullWhen(false, nameof(Data))]
     public bool IsFailure => !IsSuccess;
 
-    public MatchResponse<T, TResponse> Match<TResponse>() =>
-        new(Data, IsSuccess);
+    public TResponse Match<TResponse>(
+        Func<T, TResponse> onSuccess,
+        Func<TResponse> onFailure
+    ) =>
+        IsSuccess ?
+            onSuccess(Data!) :
+            onFailure();
 
     public AppResponse<TResponse> Map<TResponse>(
         Func<T, TResponse> mapWhenIsSuccess
@@ -33,13 +38,12 @@ public sealed record AppResponse<T>
     ) => IsSuccess ?
         bindWhenIsSuccess(Data) :
         AppResponse<TResponse>.Failed(ErrorMessages, ErrorMetadata, FailureReason);
-
+    
     public AppResponse<TResponse> MapToFailed<TResponse>(
         ErrorMessage? errorMessageWhenIsFailure = null,
         MetadataCollection? errorMetadataWhenIsFailure = null,
         FailureReason? failureReasonWhenIsFailure = null
-    )
-    {
+    ) {
         if (IsSuccess)
         {
             throw new ValueObjectException("Current app response must be failed in order to pass it to this method.");
@@ -224,47 +228,109 @@ public sealed record AppResponse<T>
             $"{nameof(AppResponse)}<{typeof(T).Name}> Succeeded: {Data}" :
             $"{GetType().Name} Failed: {string.Join('|', ErrorMessages)}";
 
-    private AppResponse() { }
+    private AppResponse() {  }
 }
 
 
-public sealed record MatchResponse<T, TResponse>
+public static class AppResponseAsync
 {
-    private readonly T? _data;
-    private readonly bool _isSuccess;
+    public static async Task<AppResponse<TResponse>> MapAsync<T, TResponse>(
+        this Task<AppResponse<T>> response,
+        Func<T, TResponse> mapWhenIsSuccess
+    ) => (await response).Map(mapWhenIsSuccess);
 
-    [SetsRequiredMembers]
-    public MatchResponse(T? data, bool isSuccess)
-    {
-        _data = data;
-        _isSuccess = isSuccess;
-    }
+    public static async Task<AppResponse<TResponse>> MapAsync<T, TResponse>(
+        this AppResponse<T> response,
+        Func<T, Task<TResponse>> mapWhenIsSuccessAsync
+    ) => response.TryGetData(out T? responseData) ?
+        AppResponse<TResponse>.Succeeded(await mapWhenIsSuccessAsync(responseData)) :
+        AppResponse<TResponse>.Failed(response);
 
-    public WithSuccessCase WhenIsSuccess(Func<T, TResponse> mapWhenIsSuccess) =>
-        new(_data, _isSuccess, mapWhenIsSuccess);
+    public static async Task<AppResponse<TResponse>> MapAsync<T, TResponse>(
+        this Task<AppResponse<T>> response,
+        Func<T, Task<TResponse>> mapWhenIsSuccessAsync
+    ) => await (await response).MapAsync(mapWhenIsSuccessAsync);
 
 
-    public sealed record WithSuccessCase
-    {
-        private readonly T? _data;
-        private readonly bool _isSuccess;
-        private readonly Func<T, TResponse> _mapWhenIsSuccess;
+    public static async Task<AppResponse<TResponse>> BindAsync<T, TResponse>(
+        this Task<AppResponse<T>> response,
+        Func<T, AppResponse<TResponse>> bindWhenIsSuccess
+    ) => (await response).Bind(bindWhenIsSuccess);
 
-        [SetsRequiredMembers]
-        public WithSuccessCase(T? data, bool isSuccess, Func<T, TResponse> mapWhenIsSuccess)
-        {
-            _data = data;
-            _isSuccess = isSuccess;
-            _mapWhenIsSuccess = mapWhenIsSuccess;
-        }
+    public static async Task<AppResponse<TResponse>> BindAsync<T, TResponse>(
+        this AppResponse<T> response,
+        Func<T, Task<AppResponse<TResponse>>> bindWhenIsSuccessAsync
+    ) => response.TryGetData(out T? responseData) ?
+        await bindWhenIsSuccessAsync(responseData) :
+        AppResponse<TResponse>.Failed(response);
 
-        public TResponse WhenIsFailure(Func<TResponse> mapWhenIsFailure)
-        {
-            return _isSuccess ?
-                _mapWhenIsSuccess(_data!) :
-                mapWhenIsFailure();
-        }
-    }
+    public static async Task<AppResponse<TResponse>> BindAsync<T, TResponse>(
+        this Task<AppResponse<T>> response,
+        Func<T, Task<AppResponse<TResponse>>> bindWhenIsSuccessAsync
+    ) => await (await response).BindAsync(bindWhenIsSuccessAsync);
+
+
+    public static async Task<AppResponse<TResponse>> MapToFailedAsync<T, TResponse>(
+        this Task<AppResponse<T>> response,
+       ErrorMessage? errorMessageWhenIsFailure = null,
+       MetadataCollection? errorMetadataWhenIsFailure = null,
+       FailureReason? failureReasonWhenIsFailure = null
+   ) => (await response).MapToFailed<TResponse>(errorMessageWhenIsFailure, errorMetadataWhenIsFailure, failureReasonWhenIsFailure);
+
+
+    public static async Task<TResponse> MatchAsync<T, TResponse>(
+        this Task<AppResponse<T>> response,
+        Func<T, TResponse> onSuccess,
+        Func<TResponse> onFailure
+    ) => (await response).Match(onSuccess, onFailure);
+
+    public static async Task<TResponse> MatchAsync<T, TResponse>(
+        this AppResponse<T> response,
+        Func<T, Task<TResponse>> onSuccessAsync,
+        Func<TResponse> onFailure
+    ) => response.TryGetData(out T? responseData) ?
+        await onSuccessAsync(responseData) :
+        onFailure();
+
+    public static async Task<TResponse> MatchAsync<T, TResponse>(
+        this AppResponse<T> response,
+        Func<T, TResponse> onSuccess,
+        Func<Task<TResponse>> onFailureAsync
+    ) => response.TryGetData(out T? responseData) ?
+        onSuccess(responseData) :
+        await onFailureAsync();
+
+    public static async Task<TResponse> MatchAsync<T, TResponse>(
+        this AppResponse<T> response,
+        Func<T, Task<TResponse>> onSuccessAsync,
+        Func<Task<TResponse>> onFailureAsync
+    ) => response.TryGetData(out T? responseData) ?
+        await onSuccessAsync(responseData) :
+        await onFailureAsync();
+
+    public static async Task<TResponse> MatchAsync<T, TResponse>(
+        this Task<AppResponse<T>> response,
+        Func<T, Task<TResponse>> onSuccessAsync,
+        Func<TResponse> onFailure
+    ) => (await response).TryGetData(out T? responseData) ?
+        await onSuccessAsync(responseData) :
+        onFailure();
+
+    public static async Task<TResponse> MatchAsync<T, TResponse>(
+        this Task<AppResponse<T>> response,
+        Func<T, TResponse> onSuccess,
+        Func<Task<TResponse>> onFailureAsync
+    ) => (await response).TryGetData(out T? responseData) ?
+        onSuccess(responseData) :
+        await onFailureAsync();
+
+    public static async Task<TResponse> MatchAsync<T, TResponse>(
+        this Task<AppResponse<T>> response,
+        Func<T, Task<TResponse>> onSuccessAsync,
+        Func<Task<TResponse>> onFailureAsync
+    ) => (await response).TryGetData(out T? responseData) ?
+        await onSuccessAsync(responseData) :
+        await onFailureAsync();
 }
 
 
@@ -458,5 +524,5 @@ public sealed record AppResponse
             $"{nameof(AppResponse)} Succeeded" :
             $"{nameof(AppResponse)} Failed: {string.Join('|', ErrorMessages)}";
 
-    private AppResponse() { }
+    private AppResponse() {  }
 }

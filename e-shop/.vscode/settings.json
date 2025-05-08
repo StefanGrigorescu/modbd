@@ -1,0 +1,15 @@
+{
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+        "source.organizeImports": "always",
+        "source.addMissingImports": "always",
+    },
+    "editor.indentSize": "tabSize",
+    "editor.detectIndentation": false,
+    "html.format.wrapAttributes": "force-expand-multiline",
+    "files.insertFinalNewline": true,
+    "scss.format.spaceAroundSelectorSeparator": true,
+    "css.format.spaceAroundSelectorSeparator": true,
+    "editor.fontSize": 12,
+    "explorer.compactFolders": false,
+}

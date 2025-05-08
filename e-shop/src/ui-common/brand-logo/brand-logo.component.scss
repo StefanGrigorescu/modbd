@@ -1,0 +1,24 @@
+.brand-logo {
+    --_brand-logo-size: var(--brand-logo-size, 288px);
+
+    width: var(--_brand-logo-size);
+    aspect-ratio: 1;
+
+    position: relative;
+
+    & .peach-img {
+        position: absolute;
+        top: 0;
+
+        width: calc(var(--_brand-logo-size) * 85 / 100);
+        aspect-ratio: 1;
+    }
+
+    & .market-tag-img {
+        position: absolute;
+        bottom: 7.5%;
+
+        width: calc(var(--_brand-logo-size) * 25 / 100);
+        aspect-ratio: 1;
+    }
+}

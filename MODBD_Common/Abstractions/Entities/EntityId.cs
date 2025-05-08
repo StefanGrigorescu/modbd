@@ -2,7 +2,9 @@
 
 namespace MODBD_Common.Abstractions.Entities;
 
-public abstract class EntityId<TValue> : ValueObject<TValue>
+public abstract class EntityId<TValue> : 
+    ValueObject<TValue>,
+    IImmutable
     where TValue : IEquatable<TValue>, IComparable<TValue>
 {
     public override string ToString() =>

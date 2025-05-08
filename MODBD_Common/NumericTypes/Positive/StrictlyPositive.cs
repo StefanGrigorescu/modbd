@@ -15,7 +15,7 @@ public class StrictlyPositive<TNumber> : ValueObject<TNumber>
     }
     public static StrictlyPositive<TNumber> FromDbStoredValue(TNumber value) => new() { Value = value, };
 
-    public StrictlyPositive<TNumber> Plus(TNumber value) => new() { Value = Value + value, };
+    public StrictlyPositive<TNumber> Plus(TNumber value) => From(Value + value);
     public StrictlyPositive<TNumber> Multiply(TNumber value)
     {
         NotStrictlyPositiveException<TNumber>.ThrowIfIsNotStrictlyPositive(value);

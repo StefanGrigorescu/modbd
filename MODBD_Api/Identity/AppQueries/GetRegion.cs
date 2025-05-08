@@ -5,6 +5,7 @@ using MODBD_Common.Abstractions.Responses;
 using MODBD_Api.Common.Contracts;
 using MODBD_Api.Common.Persistence;
 using System.Data;
+using MODBD_Api.Common;
 
 namespace MODBD_Api.Identity.AppQueries;
 
@@ -60,7 +61,7 @@ public sealed class GetRegionQueryHandler : IRequestHandler<GetRegionQuery, GetR
 
     public async ValueTask<AppResponse<GetRegionResponse>> Handle(GetRegionQuery request, CancellationToken cancellationToken)
     {
-        using (IDbConnection dbConnection = _getDbConnection())
+        using (IDbConnection dbConnection = _getDbConnection(Tenant.Oltp))
         {
             string sql = @"
                     SELECT name, created_on, last_updated_on 

@@ -1,0 +1,67 @@
+<div class="form-page">
+    <mat-card class="form-card">
+        <div class="logo-column">
+            <app-brand-logo />
+        </div>
+
+        <form
+            class="app-form"
+            [formGroup]="loginForm"
+            (ngSubmit)="onSubmit()"
+        >
+            <section class="app-form-section">
+                <div class="app-form-section-row-margin-bottom">
+                    <app-email
+                        id="email"
+                        [control]="loginForm.emailControl"
+                        fieldTitle="Email"
+                        autocomplete="email"
+                    />
+                </div>
+
+                <div class="extra-space-for-error-messages">
+                    <app-password
+                        id="password"
+                        fieldTitle="Password"
+                        [control]="loginForm.passwordControl"
+                        autocomplete="current-password"
+                    />
+                </div>
+            </section>
+
+
+            <section class="app-form-section">
+                <div
+                    class="app-alert-danger"
+                    *ngIf="loginForm.errorMessage"
+                >
+                    <span>{{ loginForm.errorMessage }}</span>
+                </div>
+            </section>
+
+
+            <section class="app-form-section">
+
+                <div class="app-controls-row app-controls-row--right">
+                    <button
+                        type="submit"
+                        color="accent"
+                        mat-raised-button
+                        [matTooltip]="submitBtnTooltip"
+                        [disabled]="loginForm.invalid && loginForm.touched"
+                    >
+                        Login
+                    </button>
+                </div>
+
+                <a
+                    class="app-ref"
+                    routerLink="/auth/register"
+                >
+                    Not registered yet?<wbr> Register now!
+                </a>
+
+            </section>
+        </form>
+    </mat-card>
+</div>

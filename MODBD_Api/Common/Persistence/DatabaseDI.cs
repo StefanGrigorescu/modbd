@@ -1,4 +1,7 @@
-﻿namespace MODBD_Api.Common.Persistence;
+﻿using Microsoft.Extensions.DependencyInjection;
+using MODBD_Common.Collections;
+
+namespace MODBD_Api.Common.Persistence;
 
 public static class DatabaseDI
 {
@@ -10,14 +13,23 @@ public static class DatabaseDI
     /// <returns></returns>
     public static IServiceCollection AddDatabaseServices(this IServiceCollection services, IConfiguration configuration, IWebHostEnvironment environment)
     {
-        string connectionString = configuration.GetConnectionString("OracleDb") ??
-            throw new Exception($"Connection string not found. Check the environment variables or other configuration source where it should have been provided.");
+        AppReadOnlyDictionary<Tenant, string> tenantConnectionString = AppReadOnlyDictionary<Tenant, string>.New(new Dictionary<Tenant, string>()
+        {
+            [Tenant.Oltp] = GetConnectionString(configuration, "OltpDb"),
+            [Tenant.Global] = GetConnectionString(configuration, "GlobalDb"),
+            [Tenant.Muntenia] = GetConnectionString(configuration, "MunteniaDb"),
+            [Tenant.Romania] = GetConnectionString(configuration, "RomaniaDb"),
+        });
 
         services.AddScoped<GetDbConnection>(serviceProvider =>
-            new GetDbConnectionImpl(connectionString).Invoke);
+            new GetDbConnectionImpl(tenantConnectionString).Invoke);
 
         //services.AddScoped<IModbdRepository, ModbdRepository>();
 
         return services;
     }
+
+    private static string GetConnectionString(IConfiguration configuration, string name) =>
+        configuration.GetConnectionString(name) ??
+            throw new Exception($"Connection string {name} not found. Check the environment variables or other configuration source where it should have been provided.");
 }

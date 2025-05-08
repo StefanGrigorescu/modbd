@@ -61,24 +61,15 @@ public abstract class Entity<TEntityId, TEntityIdValue>
         Id.Equals(other.Id);
 
     public override bool Equals(object? obj) =>
-        obj is not null &&
         obj is Entity<TEntityId, TEntityIdValue> other &&
         ((IEquatable<Entity<TEntityId, TEntityIdValue>>)this).Equals(other);
 
-    public static bool operator ==(Entity<TEntityId, TEntityIdValue> left, Entity<TEntityId, TEntityIdValue> right)
-    {
-        if ((object?)left is null && (object?)right is null)
-        {
-            return true;
-        }
-
-        if ((object?)left is null || (object?)right is null)
-        {
-            return false;
-        }
-
-        return left.Equals(right);
-    }
+    public static bool operator ==(Entity<TEntityId, TEntityIdValue> left, Entity<TEntityId, TEntityIdValue> right) =>
+        (left is null && right is null) || (
+            left is not null &&
+            right is not null &&
+            left.Equals(right)
+        );
 
     public static bool operator !=(Entity<TEntityId, TEntityIdValue> left, Entity<TEntityId, TEntityIdValue> right) =>
         !(left == right);

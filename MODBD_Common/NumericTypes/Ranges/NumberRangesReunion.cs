@@ -1,21 +1,16 @@
-﻿using System.Collections.ObjectModel;
-using System.Numerics;
+﻿using System.Numerics;
+using MODBD_Common.Collections;
 
 namespace MODBD_Common.NumericTypes.Ranges;
 
 public sealed class NumberRangesReunion<TNumber> :
-    ReadOnlyCollection<NumberRange<TNumber>>,
-    INumberSet<TNumber>,
+    AppImmutableList<NumberRange<TNumber>>,
     IReadOnlyList<NumberRange<TNumber>>,
-    IEquatable<NumberRangesReunion<TNumber>>
+    INumberSet<TNumber>
     where TNumber : struct, INumber<TNumber>, IMinMaxValue<TNumber>
 {
-    public bool Equals(NumberRangesReunion<TNumber>? other) =>
-        other is not null && 
-        Count == other.Count && 
-        !this.Any((NumberRange<TNumber> range) =>
-            ! other.Contains(range)
-        );
+    public override bool Equals(AppReadOnlyList<NumberRange<TNumber>>? other) =>
+        this.IReadOnlyListContainsSameElements(other);
 
     public NumberRangesReunion<TNumber> Intersect(NumberRangesReunion<TNumber> other) => From(
         other   // for each other range, create an intersections with my ranges

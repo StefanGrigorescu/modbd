@@ -7,7 +7,7 @@ public sealed class SortingDirection : Enumeration<SortingDirection>
     public static readonly SortingDirection Ascending = new() { Id = 0, Name = "Ascending", };
     public static readonly SortingDirection Descending = new() { Id = 1, Name = "Descending", };
 
-    public static SortingDirection Default =>
+    public static SortingDirection Default => 
         Descending;
 
     private SortingDirection() { }

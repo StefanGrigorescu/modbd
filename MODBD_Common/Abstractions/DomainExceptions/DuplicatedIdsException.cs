@@ -22,6 +22,5 @@ public class DuplicatedIdsException : ValueObjectException
     }
 
     private DuplicatedIdsException(string collectionTypeName, string itemsTypeName) : base(
-        $"{collectionTypeName} must not have {itemsTypeName} items with duplicated names!.")
-    { }
+        $"{collectionTypeName} must not have {itemsTypeName} items with duplicated names!.") { }
 }

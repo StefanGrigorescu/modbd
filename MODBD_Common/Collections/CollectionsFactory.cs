@@ -113,7 +113,7 @@ public static class CollectionsFactory
         where TKey : notnull
     {
         SortedList<TKey, TValue> sortedList = [];
-        if (source is null)
+        if(source is null)
         {
             return sortedList;
         }

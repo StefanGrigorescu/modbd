@@ -15,5 +15,5 @@ public sealed class QueryLimit : ValueObject<int>
     /// </summary>
     public static readonly QueryLimit PageSize = new() { Value = 100, };
 
-    private QueryLimit() { }
+    private QueryLimit() {  }
 }
