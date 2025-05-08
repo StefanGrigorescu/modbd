@@ -74,7 +74,7 @@ BEGIN
 
     -- Check and create IDNT_Users table
     TRY_CREATE_TABLE('IDNT_USERS', ' 
-        id NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+        id NUMBER PRIMARY KEY,
         username NVARCHAR2(25) UNIQUE NOT NULL,
         first_name NVARCHAR2(150) NOT NULL,
         last_name NVARCHAR2(150) NOT NULL,

@@ -1,13 +1,29 @@
 SET SERVEROUTPUT ON;
 
--- Switch to OLTP PDB
 ALTER SESSION SET CONTAINER = eshop_oltp;
 
--- Set the schema to the desired user
 ALTER SESSION SET CURRENT_SCHEMA = ESHOP_OLTP_USER;
 
+CREATE OR REPLACE FUNCTION New_Snowflake_Id (
+    p_now IN TIMESTAMP,
+    p_region_id IN NUMBER,
+    p_random IN NUMBER
+) RETURN NUMBER IS
+BEGIN
+    -- Generate the order ID in the format "{year:4}{month:2}{day:2}{region_id:2}{random:12}"
+    RETURN TO_NUMBER(
+        TO_CHAR(p_now, 'YYYYMMDD') || 
+        LPAD(p_region_id, 2, '0') || 
+        LPAD(p_random, 12, '0')
+    );
+EXCEPTION
+    WHEN OTHERS THEN
+        LOG_ERROR('New_Snowflake_Id: Error generating snowflake ID: ' || SQLERRM);
+        RETURN NULL;
+END;
+/
 
--- Create procedure to insert a city
+
 CREATE OR REPLACE PROCEDURE INSERT_CITY (
     p_region_id IN NUMBER,
     p_city_name IN NVARCHAR2
@@ -21,7 +37,6 @@ BEGIN
     AND region_id = p_region_id;
 
     IF city_exists = 0 THEN
-        -- Insert the city if it doesn't exist
         INSERT INTO IDNT_CITIES (region_id, name)
         VALUES (p_region_id, p_city_name);
         LOG_INFORMATION('INSERT_CITY: City ' || p_city_name || ' created.');
@@ -55,7 +70,6 @@ BEGIN
     ELSIF region_exists_by_name > 0 THEN
         LOG_DEBUG('INSERT_REGION_AND_CITIES: Region name ' || p_region_name || ' already exists.');
     ELSE
-        -- Insert the region if both ID and name are unique
         INSERT INTO IDNT_REGIONS (id, name)
         VALUES (p_region_id, p_region_name);
         LOG_INFORMATION('INSERT_REGION_AND_CITIES: Region ' || p_region_name || ' with ID ' || p_region_id || ' created.');
@@ -110,7 +124,6 @@ BEGIN
     ELSIF role_exists_by_name > 0 THEN
         LOG_DEBUG('INSERT_ROLE: Role name ' || p_role_name || ' already exists.');
     ELSE
-        -- Insert the role if both ID and name are unique
         INSERT INTO IDNT_ROLES (id, name)
         VALUES (p_role_id, p_role_name);
         LOG_INFORMATION('INSERT_ROLE: Role ' || p_role_name || ' with ID ' || p_role_id || ' created.');
@@ -133,7 +146,6 @@ END;
 /
 
 
--- Create procedure to insert a user role
 CREATE OR REPLACE PROCEDURE INSERT_USER_ROLE (
     p_user_id IN NUMBER,
     p_role_name IN VARCHAR2
@@ -151,7 +163,6 @@ BEGIN
     END;
 
     IF role_id IS NOT NULL THEN
-        -- Insert the user role if the role exists
         INSERT INTO IDNT_USER_ROLES (user_id, role_id)
         VALUES (p_user_id, role_id);
         LOG_INFORMATION('INSERT_USER_ROLE: Role ' || p_role_name || ' assigned to user ID ' || p_user_id || '.');
@@ -166,7 +177,7 @@ EXCEPTION
 END;
 /
 
--- Create procedure to insert a user (staff, not customer)
+-- Insert a user (staff, not customer)
 CREATE OR REPLACE PROCEDURE INSERT_USER (
     p_username IN NVARCHAR2,
     p_first_name IN NVARCHAR2,
@@ -177,7 +188,10 @@ CREATE OR REPLACE PROCEDURE INSERT_USER (
     p_password IN VARCHAR2,
     p_salt IN VARCHAR2,
     p_roles_csv IN VARCHAR2,
-    p_user_created OUT NUMBER -- New OUT parameter
+    p_now IN TIMESTAMP,
+    p_region_id IN NUMBER,
+    p_random IN NUMBER,
+    p_user_created OUT NUMBER
 ) IS
     user_exists NUMBER := 0;
     user_id NUMBER;
@@ -189,14 +203,18 @@ BEGIN
     OR UPPER(email) = UPPER(p_email);
  
     IF user_exists = 0 THEN
-        -- Insert the user if they don't exist
+        user_id := New_Snowflake_Id(
+            p_now => p_now,
+            p_region_id => p_region_id,
+            p_random => p_random
+        );
+
         INSERT INTO IDNT_USERS (
-            username, first_name, last_name, date_of_birth, email, phone_number, password, salt
+            id, username, first_name, last_name, date_of_birth, email, phone_number, password, salt, region_id, created_on
         ) VALUES (
-            p_username, p_first_name, p_last_name, p_date_of_birth, p_email, p_phone_number, p_password, p_salt
-        ) RETURNING id INTO user_id;
+            user_id, p_username, p_first_name, p_last_name, p_date_of_birth, p_email, p_phone_number, p_password, p_salt, p_region_id, p_now
+        );
  
-        -- Log success
         LOG_INFORMATION('INSERT_USER: User ' || p_username || ' created.');
  
         -- Split the roles CSV and insert each role
@@ -206,10 +224,8 @@ BEGIN
             INSERT_USER_ROLE(user_id, role_name.role_name);
         END LOOP;
  
-        -- Set OUT parameter
         p_user_created := 1; -- User was successfully created
     ELSE
-        -- Log user exists
         LOG_DEBUG('INSERT_USER: User with username ' || p_username || ' or email ' || p_email || ' already exists.');
         p_user_created := 0; -- User already exists
     END IF;
@@ -236,6 +252,9 @@ BEGIN
         p_password => 'Password1!',
         p_salt => '123abc',
         p_roles_csv => 'System Admin',
+        p_now => TO_TIMESTAMP('2024-01-15 10:00:00', 'YYYY-MM-DD HH24:MI:SS'),
+        p_region_id => 0,
+        p_random => 0,
         p_user_created => p_user_created
     );
 
@@ -249,6 +268,9 @@ BEGIN
         p_password => 'Password1!',
         p_salt => '123abc',
         p_roles_csv => 'System Admin',
+        p_now => TO_TIMESTAMP('2024-03-10 14:30:00', 'YYYY-MM-DD HH24:MI:SS'),
+        p_region_id => 3,
+        p_random => 1,
         p_user_created => p_user_created
     );
 
@@ -262,6 +284,9 @@ BEGIN
         p_password => 'Password1!',
         p_salt => '123abc',
         p_roles_csv => 'System Admin',
+        p_now => TO_TIMESTAMP('2024-05-20 09:15:00', 'YYYY-MM-DD HH24:MI:SS'),
+        p_region_id => 7,
+        p_random => 2,
         p_user_created => p_user_created
     );
 
@@ -276,6 +301,9 @@ BEGIN
         p_password => 'Password1!',
         p_salt => '123abc',
         p_roles_csv => 'Roles Admin',
+        p_now => TO_TIMESTAMP('2024-02-12 08:45:00', 'YYYY-MM-DD HH24:MI:SS'),
+        p_region_id => 4,
+        p_random => 3,
         p_user_created => p_user_created
     );
 
@@ -289,6 +317,9 @@ BEGIN
         p_password => 'Password1!',
         p_salt => '123abc',
         p_roles_csv => 'Roles Admin',
+        p_now => TO_TIMESTAMP('2024-06-18 13:20:00', 'YYYY-MM-DD HH24:MI:SS'),
+        p_region_id => 2,
+        p_random => 4,
         p_user_created => p_user_created
     );
 
@@ -302,6 +333,9 @@ BEGIN
         p_password => 'Password1!',
         p_salt => '123abc',
         p_roles_csv => 'Roles Admin',
+        p_now => TO_TIMESTAMP('2024-11-03 17:05:00', 'YYYY-MM-DD HH24:MI:SS'),
+        p_region_id => 6,
+        p_random => 5,
         p_user_created => p_user_created
     );
     
@@ -316,6 +350,9 @@ BEGIN
         p_password => 'Password1!',
         p_salt => '123abc',
         p_roles_csv => 'Purchases Rep',
+        p_now => TO_TIMESTAMP('2024-04-22 11:00:00', 'YYYY-MM-DD HH24:MI:SS'),
+        p_region_id => 5,
+        p_random => 6,
         p_user_created => p_user_created
     );
 
@@ -329,6 +366,9 @@ BEGIN
         p_password => 'Password1!',
         p_salt => '123abc',
         p_roles_csv => 'Purchases Rep',
+        p_now => TO_TIMESTAMP('2024-07-14 15:30:00', 'YYYY-MM-DD HH24:MI:SS'),
+        p_region_id => 1,
+        p_random => 7,
         p_user_created => p_user_created
     );
 
@@ -342,6 +382,9 @@ BEGIN
         p_password => 'Password1!',
         p_salt => '123abc',
         p_roles_csv => 'Purchases Rep',
+        p_now => TO_TIMESTAMP('2024-09-09 09:45:00', 'YYYY-MM-DD HH24:MI:SS'),
+        p_region_id => 8,
+        p_random => 8,
         p_user_created => p_user_created
     );
 
@@ -355,6 +398,9 @@ BEGIN
         p_password => 'Password1!',
         p_salt => '123abc',
         p_roles_csv => 'Purchases Rep',
+        p_now => TO_TIMESTAMP('2024-05-25 10:10:00', 'YYYY-MM-DD HH24:MI:SS'),
+        p_region_id => 0,
+        p_random => 9,
         p_user_created => p_user_created
     );
 
@@ -368,6 +414,9 @@ BEGIN
         p_password => 'Password1!',
         p_salt => '123abc',
         p_roles_csv => 'Purchases Rep',
+        p_now => TO_TIMESTAMP('2024-12-01 18:20:00', 'YYYY-MM-DD HH24:MI:SS'),
+        p_region_id => 3,
+        p_random => 10,
         p_user_created => p_user_created
     );
     
@@ -382,6 +431,9 @@ BEGIN
         p_password => 'Password1!',
         p_salt => '123abc',
         p_roles_csv => 'Sales Rep',
+        p_now => TO_TIMESTAMP('2024-03-22 10:30:00', 'YYYY-MM-DD HH24:MI:SS'),
+        p_region_id => 2,
+        p_random => 11,
         p_user_created => p_user_created
     );
 
@@ -395,6 +447,9 @@ BEGIN
         p_password => 'Password1!',
         p_salt => '123abc',
         p_roles_csv => 'Sales Rep',
+        p_now => TO_TIMESTAMP('2024-08-05 14:00:00', 'YYYY-MM-DD HH24:MI:SS'),
+        p_region_id => 5,
+        p_random => 12,
         p_user_created => p_user_created
     );
 
@@ -408,6 +463,9 @@ BEGIN
         p_password => 'Password1!',
         p_salt => '123abc',
         p_roles_csv => 'Sales Rep',
+        p_now => TO_TIMESTAMP('2024-10-12 09:10:00', 'YYYY-MM-DD HH24:MI:SS'),
+        p_region_id => 8,
+        p_random => 13,
         p_user_created => p_user_created
     );
 
@@ -421,6 +479,9 @@ BEGIN
         p_password => 'Password1!',
         p_salt => '123abc',
         p_roles_csv => 'Sales Rep',
+        p_now => TO_TIMESTAMP('2024-05-28 16:40:00', 'YYYY-MM-DD HH24:MI:SS'),
+        p_region_id => 4,
+        p_random => 14,
         p_user_created => p_user_created
     );
 
@@ -434,40 +495,41 @@ BEGIN
         p_password => 'Password1!',
         p_salt => '123abc',
         p_roles_csv => 'Sales Rep',
+        p_now => TO_TIMESTAMP('2024-12-19 12:25:00', 'YYYY-MM-DD HH24:MI:SS'),
+        p_region_id => 7,
+        p_random => 15,
         p_user_created => p_user_created
     );
 END;
 /
 
 
--- Create procedure to insert a user address
 CREATE OR REPLACE FUNCTION INSERT_USER_ADDRESS (
     p_user_id IN NUMBER,
-    p_region_name IN NVARCHAR2,
+    p_region_id IN NUMBER,
     p_city_name IN NVARCHAR2,
     p_street IN NVARCHAR2,
     p_str_number IN NUMBER,
     p_postal_code IN VARCHAR2,
     p_other_details IN NVARCHAR2 DEFAULT NULL,
-    p_region_id OUT NUMBER
 ) RETURN NUMBER IS
     city_id NUMBER;
 BEGIN
     -- Check if the city exists in the specified region
     BEGIN
-        SELECT c.id, r.id 
-        INTO city_id, p_region_id
+        SELECT c.id 
+        INTO city_id
         FROM IDNT_CITIES c
-        JOIN IDNT_REGIONS r ON c.region_id = r.id
+        INNER JOIN IDNT_REGIONS r 
+            ON c.region_id = r.id
         WHERE UPPER(c.name) = UPPER(p_city_name)
-        AND UPPER(r.name) = UPPER(p_region_name);
+        AND r.id = p_region_id;
     EXCEPTION
         WHEN NO_DATA_FOUND THEN
             city_id := NULL;
     END;
 
     IF city_id IS NOT NULL THEN
-        -- Insert the user address if the city exists
         INSERT INTO IDNT_USER_ADDRESSES (
             user_id, city_id, street, str_number, postal_code, other_details
         ) VALUES (
@@ -486,7 +548,6 @@ EXCEPTION
 END;
 /
 
--- Create procedure to insert a customer
 CREATE OR REPLACE PROCEDURE INSERT_CUSTOMER (
     p_username IN NVARCHAR2,
     p_first_name IN NVARCHAR2,
@@ -501,7 +562,9 @@ CREATE OR REPLACE PROCEDURE INSERT_CUSTOMER (
     p_street IN NVARCHAR2,
     p_str_number IN NUMBER,
     p_postal_code IN VARCHAR2,
-    p_other_details IN NVARCHAR2 DEFAULT NULL
+    p_other_details IN NVARCHAR2 DEFAULT NULL,
+    p_now IN TIMESTAMP DEFAULT SYSTIMESTAMP,
+    p_random IN NUMBER
 ) IS
     user_exists NUMBER := 0;
     user_id NUMBER;
@@ -515,32 +578,41 @@ BEGIN
     OR UPPER(email) = UPPER(p_email);
 
     IF user_exists = 0 THEN
-        -- Insert the user if they don't exist
+            -- Find the region ID by name
+        BEGIN
+            SELECT id INTO customer_region_id
+            FROM IDNT_REGIONS
+            WHERE UPPER(name) = UPPER(p_region_name);
+        EXCEPTION
+            WHEN NO_DATA_FOUND THEN
+                LOG_ERROR('INSERT_CUSTOMER: Region ' || p_region_name || ' does not exist. Address creation failed for user ID ' || user_id || '.');
+                RETURN;
+        END;
+
+        user_id := New_Snowflake_Id(
+            p_now => p_now,
+            p_region_id => customer_region_id,
+            p_random => p_random
+        );
+
         INSERT INTO IDNT_USERS (
-            username, first_name, last_name, date_of_birth, email, phone_number, password, salt
+            id, username, first_name, last_name, date_of_birth, email, phone_number, password, salt, region_id, created_on
         ) VALUES (
-            p_username, p_first_name, p_last_name, p_date_of_birth, p_email, p_phone_number, p_password, p_salt
-        ) RETURNING id INTO user_id;
+            user_id, p_username, p_first_name, p_last_name, p_date_of_birth, p_email, p_phone_number, p_password, p_salt, customer_region_id, p_now
+        );
         LOG_INFORMATION('INSERT_CUSTOMER: User ' || p_username || ' created.');
 
-        -- Insert the user address
         address_created := INSERT_USER_ADDRESS(
             p_user_id => user_id,
-            p_region_name => p_region_name,
+            p_region_id => customer_region_id,
             p_city_name => p_city_name,
             p_street => p_street,
             p_str_number => p_str_number,
             p_postal_code => p_postal_code,
-            p_other_details => p_other_details,
-            p_region_id => customer_region_id
+            p_other_details => p_other_details
         );
 
         IF address_created = 1 THEN
-            -- Update the user's region_id
-            UPDATE IDNT_USERS
-            SET region_id = customer_region_id
-            WHERE id = user_id;
-
             LOG_INFORMATION('INSERT_CUSTOMER: Address created for user ID ' || user_id || '.');
             COMMIT;
         ELSE
@@ -557,7 +629,6 @@ EXCEPTION
 END;
 /
 
--- Customers
 BEGIN
     INSERT_CUSTOMER(
         p_username => 'AdrianPopescu',
@@ -573,7 +644,9 @@ BEGIN
         p_street => 'Strada Principala',
         p_str_number => 1,
         p_postal_code => '010101',
-        p_other_details => NULL
+        p_other_details => NULL,
+        p_now => TO_TIMESTAMP('2024-01-10 09:15:00', 'YYYY-MM-DD HH24:MI:SS'),
+        p_random => 16
     );
 
     INSERT_CUSTOMER(
@@ -590,7 +663,9 @@ BEGIN
         p_street => 'Strada Secundara',
         p_str_number => 2,
         p_postal_code => '020202',
-        p_other_details => NULL
+        p_other_details => NULL,
+        p_now => TO_TIMESTAMP('2024-02-18 14:30:00', 'YYYY-MM-DD HH24:MI:SS'),
+        p_random => 17
     );
 
     INSERT_CUSTOMER(
@@ -607,7 +682,9 @@ BEGIN
         p_street => 'Strada Tertiar',
         p_str_number => 3,
         p_postal_code => '030303',
-        p_other_details => NULL
+        p_other_details => NULL,
+        p_now => TO_TIMESTAMP('2024-03-25 11:45:00', 'YYYY-MM-DD HH24:MI:SS'),
+        p_random => 18
     );
 
     INSERT_CUSTOMER(
@@ -624,7 +701,9 @@ BEGIN
         p_street => 'Strada Quaternar',
         p_str_number => 4,
         p_postal_code => '040404',
-        p_other_details => NULL
+        p_other_details => NULL,
+        p_now => TO_TIMESTAMP('2024-04-30 08:10:00', 'YYYY-MM-DD HH24:MI:SS'),
+        p_random => 19
     );
 
     INSERT_CUSTOMER(
@@ -641,7 +720,9 @@ BEGIN
         p_street => 'Strada Quintenar',
         p_str_number => 5,
         p_postal_code => '050505',
-        p_other_details => NULL
+        p_other_details => NULL,
+        p_now => TO_TIMESTAMP('2024-05-15 17:20:00', 'YYYY-MM-DD HH24:MI:SS'),
+        p_random => 20
     );
 
     INSERT_CUSTOMER(
@@ -658,7 +739,9 @@ BEGIN
         p_street => 'Strada Sextenar',
         p_str_number => 6,
         p_postal_code => '060606',
-        p_other_details => NULL
+        p_other_details => NULL,
+        p_now => TO_TIMESTAMP('2024-06-22 13:05:00', 'YYYY-MM-DD HH24:MI:SS'),
+        p_random => 21
     );
 
     INSERT_CUSTOMER(
@@ -675,7 +758,9 @@ BEGIN
         p_street => 'Strada Septenar',
         p_str_number => 7,
         p_postal_code => '070707',
-        p_other_details => NULL
+        p_other_details => NULL,
+        p_now => TO_TIMESTAMP('2024-07-19 19:40:00', 'YYYY-MM-DD HH24:MI:SS'),
+        p_random => 22
     );
 
     INSERT_CUSTOMER(
@@ -692,7 +777,9 @@ BEGIN
         p_street => 'Strada Octenar',
         p_str_number => 8,
         p_postal_code => '080808',
-        p_other_details => NULL
+        p_other_details => NULL,
+        p_now => TO_TIMESTAMP('2024-08-27 15:55:00', 'YYYY-MM-DD HH24:MI:SS'),
+        p_random => 23
     );
 
     INSERT_CUSTOMER(
@@ -709,7 +796,9 @@ BEGIN
         p_street => 'Strada Nona',
         p_str_number => 9,
         p_postal_code => '090909',
-        p_other_details => NULL
+        p_other_details => NULL,
+        p_now => TO_TIMESTAMP('2024-09-14 10:25:00', 'YYYY-MM-DD HH24:MI:SS'),
+        p_random => 24
     );
 
     INSERT_CUSTOMER(
@@ -726,7 +815,9 @@ BEGIN
         p_street => 'Strada Decenar',
         p_str_number => 10,
         p_postal_code => '101010',
-        p_other_details => NULL
+        p_other_details => NULL,
+        p_now => TO_TIMESTAMP('2024-10-21 12:50:00', 'YYYY-MM-DD HH24:MI:SS'),
+        p_random => 25
     );
 
     INSERT_CUSTOMER(
@@ -743,7 +834,9 @@ BEGIN
         p_street => 'Strada Undecenar',
         p_str_number => 11,
         p_postal_code => '111111',
-        p_other_details => NULL
+        p_other_details => NULL,
+        p_now => TO_TIMESTAMP('2024-11-30 18:35:00', 'YYYY-MM-DD HH24:MI:SS'),
+        p_random => 26
     );
 
     INSERT_CUSTOMER(
@@ -760,7 +853,9 @@ BEGIN
         p_street => 'Strada Dodecenar',
         p_str_number => 12,
         p_postal_code => '121212',
-        p_other_details => NULL
+        p_other_details => NULL,
+        p_now => TO_TIMESTAMP('2025-01-08 07:05:00', 'YYYY-MM-DD HH24:MI:SS'),
+        p_random => 27
     );
 
     INSERT_CUSTOMER(
@@ -777,7 +872,9 @@ BEGIN
         p_street => 'Strada Tredecenar',
         p_str_number => 13,
         p_postal_code => '131313',
-        p_other_details => NULL
+        p_other_details => NULL,
+        p_now => TO_TIMESTAMP('2025-02-14 16:30:00', 'YYYY-MM-DD HH24:MI:SS'),
+        p_random => 28
     );
 
     INSERT_CUSTOMER(
@@ -794,7 +891,9 @@ BEGIN
         p_street => 'Strada Quattuordecenar',
         p_str_number => 14,
         p_postal_code => '141414',
-        p_other_details => NULL
+        p_other_details => NULL,
+        p_now => TO_TIMESTAMP('2025-03-22 20:55:00', 'YYYY-MM-DD HH24:MI:SS'),
+        p_random => 29
     );
 
     INSERT_CUSTOMER(
@@ -811,7 +910,9 @@ BEGIN
         p_street => 'Strada Quindecenar',
         p_str_number => 15,
         p_postal_code => '151515',
-        p_other_details => NULL
+        p_other_details => NULL,
+        p_now => TO_TIMESTAMP('2025-04-18 22:15:00', 'YYYY-MM-DD HH24:MI:SS'),
+        p_random => 30
     );
 
     INSERT_CUSTOMER(
@@ -828,7 +929,9 @@ BEGIN
         p_street => 'Strada Sedecenar',
         p_str_number => 16,
         p_postal_code => '161616',
-        p_other_details => NULL
+        p_other_details => NULL,
+        p_now => TO_TIMESTAMP('2025-05-01 06:40:00', 'YYYY-MM-DD HH24:MI:SS'),
+        p_random => 31
     );
 
     INSERT_CUSTOMER(
@@ -845,7 +948,9 @@ BEGIN
         p_street => 'Strada Septendecenar',
         p_str_number => 17,
         p_postal_code => '171717',
-        p_other_details => NULL
+        p_other_details => NULL,
+        p_now => TO_TIMESTAMP('2025-05-08 18:00:00', 'YYYY-MM-DD HH24:MI:SS'),
+        p_random => 32
     );
 
     INSERT_CUSTOMER(
@@ -862,7 +967,9 @@ BEGIN
         p_street => 'Strada Octodecenar',
         p_str_number => 18,
         p_postal_code => '181818',
-        p_other_details => NULL
+        p_other_details => NULL,
+        p_now => TO_TIMESTAMP('2025-05-08 23:55:00', 'YYYY-MM-DD HH24:MI:SS'),
+        p_random => 33
     );
 
     INSERT_CUSTOMER(
@@ -879,7 +986,9 @@ BEGIN
         p_street => 'Strada Novendecenar',
         p_str_number => 19,
         p_postal_code => '191919',
-        p_other_details => NULL
+        p_other_details => NULL,
+        p_now => TO_TIMESTAMP('2025-05-08 23:59:00', 'YYYY-MM-DD HH24:MI:SS'),
+        p_random => 34
     );
 
     INSERT_CUSTOMER(
@@ -896,13 +1005,14 @@ BEGIN
         p_street => 'Strada Vicesimus',
         p_str_number => 20,
         p_postal_code => '202020',
-        p_other_details => NULL
+        p_other_details => NULL,
+        p_now => TO_TIMESTAMP('2025-05-08 23:59:59', 'YYYY-MM-DD HH24:MI:SS'),
+        p_random => 35
     );
 END;
 /
 
 
--- Create procedure to insert a subcategory
 CREATE OR REPLACE PROCEDURE INSERT_SUBCATEGORY (
     p_category_id IN NUMBER,
     p_subcategory_name IN NVARCHAR2
@@ -916,7 +1026,6 @@ BEGIN
     AND category_id = p_category_id;
 
     IF subcategory_exists = 0 THEN
-        -- Insert the subcategory if it doesn't exist
         INSERT INTO SLS_PRODUCT_SUBCATEGORIES (category_id, name)
         VALUES (p_category_id, p_subcategory_name);
         LOG_INFORMATION('INSERT_SUBCATEGORY: Subcategory ' || p_subcategory_name || ' created.');
@@ -951,7 +1060,6 @@ BEGIN
     ELSIF category_exists_by_name > 0 THEN
         LOG_DEBUG('INSERT_CATEGORY_AND_SUBCATEGORIES: Category name ' || p_category_name || ' already exists.');
     ELSE
-        -- Insert the category if both ID and name are unique
         INSERT INTO SLS_PRODUCT_CATEGORIES (id, name)
         VALUES (p_category_id, p_category_name);
         LOG_INFORMATION('INSERT_CATEGORY_AND_SUBCATEGORIES: Category ' || p_category_name || ' with ID ' || p_category_id || ' created.');
@@ -992,7 +1100,6 @@ END;
 /
 
 
--- Create function to attach product tags
 CREATE OR REPLACE PROCEDURE ATTACH_PRODUCT_TAGS (
     p_product_id IN NUMBER,
     p_tags_csv IN NVARCHAR2
@@ -1040,7 +1147,6 @@ EXCEPTION
 END;
 /
 
--- Create procedure to create a product within a subcategory
 CREATE OR REPLACE PROCEDURE SLS_CREATE_PRODUCT (
     p_product_name IN NVARCHAR2,
     p_description IN NVARCHAR2,
@@ -1101,7 +1207,6 @@ EXCEPTION
 END;
 /
 
--- Create products
 BEGIN
     -- Sport
     -- Football
@@ -1413,7 +1518,6 @@ BEGIN
     ELSIF discount_type_exists_by_name > 0 THEN
         LOG_DEBUG('INSERT_DISCOUNT_TYPE: Discount type name ' || p_discount_type_name || ' already exists.');
     ELSE
-        -- Insert the discount type if both ID and name are unique
         INSERT INTO SLS_DISCOUNT_TYPES (id, name)
         VALUES (p_discount_type_id, p_discount_type_name);
         LOG_INFORMATION('INSERT_DISCOUNT_TYPE: Discount type ' || p_discount_type_name || ' with ID ' || p_discount_type_id || ' created.');
@@ -1453,7 +1557,6 @@ BEGIN
     ELSIF discount_reason_exists_by_name > 0 THEN
         LOG_DEBUG('INSERT_DISCOUNT_REASON: Discount reason name ' || p_discount_reason_name || ' already exists.');
     ELSE
-        -- Insert the discount reason if both ID and name are unique
         INSERT INTO SLS_DISCOUNT_REASONS (id, name)
         VALUES (p_discount_reason_id, p_discount_reason_name);
         LOG_INFORMATION('INSERT_DISCOUNT_REASON: Discount reason ' || p_discount_reason_name || ' with ID ' || p_discount_reason_id || ' created.');
@@ -1499,7 +1602,6 @@ BEGIN
     ELSIF status_exists_by_name > 0 THEN
         LOG_DEBUG('INSERT_ORDER_STATUS: Status name ' || p_status_name || ' already exists.');
     ELSE
-        -- Insert the order status if both ID and name are unique
         INSERT INTO SLS_ORDER_STATUSES (id, name)
         VALUES (p_status_id, p_status_name);
         LOG_INFORMATION('INSERT_ORDER_STATUS: Status ' || p_status_name || ' with ID ' || p_status_id || ' created.');
@@ -1540,7 +1642,6 @@ BEGIN
     ELSIF status_exists_by_name > 0 THEN
         LOG_DEBUG('INSERT_INVOICE_STATUS: Status name ' || p_status_name || ' already exists.');
     ELSE
-        -- Insert the invoice status if both ID and name are unique
         INSERT INTO BLG_INVOICE_STATUSES (id, name)
         VALUES (p_status_id, p_status_name);
         LOG_INFORMATION('INSERT_INVOICE_STATUS: Status ' || p_status_name || ' with ID ' || p_status_id || ' created.');
@@ -1562,35 +1663,6 @@ BEGIN
 END;
 /
 
-
-CREATE OR REPLACE PROCEDURE New_Order_Id (
-    p_customer_id IN NUMBER,
-    p_now IN TIMESTAMP,
-    p_random IN NUMBER,
-    p_order_id OUT NUMBER
-) IS
-    customer_region_id NUMBER;
-BEGIN
-    -- Retrieve the region_id for the customer
-    SELECT region_id INTO customer_region_id
-    FROM IDNT_USERS
-    WHERE id = p_customer_id;
-
-    -- Generate the order ID in the format "{year:4}{month:2}{day:2}{customer_region_id:2}{random:12}"
-    p_order_id := TO_NUMBER(
-        TO_CHAR(p_now, 'YYYYMMDD') || 
-        LPAD(customer_region_id, 2, '0') || 
-        LPAD(p_random, 12, '0')
-    );
-EXCEPTION
-    WHEN NO_DATA_FOUND THEN
-        p_order_id := NULL; -- If customer_id is invalid, return NULL
-        LOG_WARNING('New_Order_Id: Invalid customer_id ' || p_customer_id);
-    WHEN OTHERS THEN
-        p_order_id := NULL;
-        LOG_ERROR('New_Order_Id: Error generating order ID: ' || SQLERRM);
-END;
-/
 
 CREATE OR REPLACE PROCEDURE PLACE_ORDER (
     p_order_id IN NUMBER,
@@ -1697,50 +1769,47 @@ CREATE OR REPLACE PROCEDURE Seed_Order (
     p_items_csv IN NVARCHAR2,
     is_success OUT NUMBER
 ) IS
-    p_customer_id NUMBER;
+    v_customer_id NUMBER;
+    v_customer_region_id NUMBER;
 BEGIN
     -- Select the p_customer_id_offset-th customer without roles
     BEGIN
-        SELECT id
-        INTO p_customer_id
+        SELECT id, region_id
+        INTO v_customer_id, v_customer_region_id
         FROM (
             SELECT 
                 c.id, 
+                c.region_id,
                 ROW_NUMBER() OVER (ORDER BY c.id) AS row_num
             FROM IDNT_CUSTOMERS c
         )
         WHERE row_num = p_customer_id_offset;
     EXCEPTION
         WHEN NO_DATA_FOUND THEN
-            -- Log error and set is_success to false if no customer is found
             LOG_ERROR('Seed_Order: No customer found with offset ' || p_customer_id_offset || '.');
             is_success := 0;
             RETURN;
     END;
 
-    -- Generate a new order ID
-    New_Order_Id(
-        p_customer_id => p_customer_id,
+    p_order_id := New_Snowflake_Id(
         p_now => p_now,
-        p_random => p_random,
-        p_order_id => p_order_id
+        p_region_id => v_customer_region_id,
+        p_random => p_random
     );
 
-    -- Place the order
     Place_Order(
         p_order_id => p_order_id,
-        p_customer_id => p_customer_id,
+        p_customer_id => v_customer_id,
         p_address => p_address,
         p_items_csv => p_items_csv,
         is_success => is_success,
         p_created_on => p_now
     );
 
-    -- Log success or failure
     IF is_success = 1 THEN
-        LOG_INFORMATION('Seed_Order: Order ' || p_order_id || ' successfully placed for customer ID ' || p_customer_id || '.');
+        LOG_INFORMATION('Seed_Order: Order ' || p_order_id || ' successfully placed for customer ID ' || v_customer_id || '.');
     ELSE
-        LOG_WARNING('Seed_Order: Failed to place order for customer ID ' || p_customer_id || '.');
+        LOG_WARNING('Seed_Order: Failed to place order for customer ID ' || v_customer_id || '.');
     END IF;
 EXCEPTION
     WHEN OTHERS THEN
@@ -1773,7 +1842,6 @@ BEGIN
     INTO customers_count 
     FROM IDNT_CUSTOMERS;
 
-    -- Loop through 50 seed orders
     FOR i IN 1..690 LOOP
         -- Determine the customer offset (repeat each offset 15 times, modulo customers_count to avoid overflow)
         p_customer_id_offset := MOD(fibonacci_offsets(CEIL(i / 15)), customers_count) + 1;
@@ -1794,7 +1862,6 @@ BEGIN
             TO_CHAR(TRUNC(DBMS_RANDOM.VALUE(1, 100))) || 'x' || TO_CHAR(TRUNC(DBMS_RANDOM.VALUE(1, 3))) || ',' ||
             TO_CHAR(TRUNC(DBMS_RANDOM.VALUE(1, 100))) || 'x' || TO_CHAR(TRUNC(DBMS_RANDOM.VALUE(1, 2)));
 
-        -- Call the Seed_Order procedure
         Seed_Order(
             p_customer_id_offset => p_customer_id_offset,
             p_now => p_now,
@@ -1817,7 +1884,6 @@ CREATE OR REPLACE PROCEDURE Pay_Order (
     is_success OUT NUMBER,
     p_now IN TIMESTAMP
 ) IS
-    -- Variables to hold order data
     v_customer_id NUMBER;
     v_customer_region_id NUMBER;
     v_order_exists NUMBER := 0;
@@ -1831,7 +1897,6 @@ BEGIN
         AND status_id = 0; -- Only consider pending orders
 
     IF v_order_exists = 0 THEN
-        -- If the order does not exist, set is_success to false and log an error
         is_success := 0;
         LOG_ERROR('Pay_Order: No pending order with ID ' || p_order_id || ' was found.');
         RETURN;
@@ -1843,7 +1908,6 @@ BEGIN
     FROM SLS_ORDERS
     WHERE id = p_order_id;
 
-    -- Create the invoice
     BEGIN
         INSERT INTO BLG_INVOICES (
             id, customer_id, customer_region_id, status_id, created_on, total_discount_in_eur
@@ -1858,7 +1922,6 @@ BEGIN
             RETURN;
     END;
 
-    -- Bulk insert invoice items
     BEGIN
         INSERT INTO BLG_INVOICE_ITEMS (
             invoice_id, product_id, product_name, product_description, 
@@ -1880,7 +1943,6 @@ BEGIN
         WHERE oi.order_id = p_order_id;
     EXCEPTION
         WHEN OTHERS THEN
-            -- Handle errors during bulk insert
             LOG_ERROR('Pay_Order: Error inserting invoice items for Order ID ' || p_order_id || ': ' || SQLERRM);
             ROLLBACK;
             is_success := 0;
@@ -1899,7 +1961,6 @@ BEGIN
     LOG_INFORMATION('Pay_Order: Order ID ' || p_order_id || ' successfully paid and invoiced.');
 EXCEPTION
     WHEN OTHERS THEN
-        -- Handle any other errors
         LOG_ERROR('Pay_Order: Error processing Order ID ' || p_order_id || ': ' || SQLERRM);
         ROLLBACK;
         is_success := 0;
@@ -1926,7 +1987,6 @@ BEGIN
     -- Set a deterministic seed for DBMS_RANDOM
     DBMS_RANDOM.SEED(96);
 
-    -- Loop through the first 20 Fibonacci numbers
     FOR i IN 1..20 LOOP
         -- Calculate the offset using Fibonacci(i) modulo orders_count
         SELECT id
