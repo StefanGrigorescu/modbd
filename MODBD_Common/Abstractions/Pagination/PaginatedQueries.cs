@@ -24,11 +24,11 @@ public abstract record PaginatedEntitiesQuery<TEntity>
     public required QueryLimit PageSize { get; init; } = QueryLimit.PageSize;
 
     [SetsRequiredMembers]
-    protected PaginatedEntitiesQuery()
+    protected PaginatedEntitiesQuery() 
     {
         // For the first fetch, query a smaller amount of items.
-        PageSize = PreviousFilter is null ?
-            QueryLimit.SmallMaxItemsCount :
+        PageSize = PreviousFilter is null ? 
+            QueryLimit.SmallMaxItemsCount : 
             PageSize;
     }
 }

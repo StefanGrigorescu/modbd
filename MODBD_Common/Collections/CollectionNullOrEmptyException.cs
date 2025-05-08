@@ -47,8 +47,7 @@ public sealed class CollectionNullOrEmptyException : Exception
 
     private CollectionNullOrEmptyException(string paramName) : base(
         $"'{paramName}' must not be null or empty!"
-    )
-    { }
+    ) { }
 }
 
 

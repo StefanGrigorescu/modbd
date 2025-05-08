@@ -16,7 +16,7 @@ public sealed class Positive<TNumber> : ValueObject<TNumber>
     }
     public static Positive<TNumber> FromDbStoredValue(TNumber value) => new() { Value = value, };
 
-    public Positive<TNumber> Plus(TNumber value) => new() { Value = Value + value, };
+    public Positive<TNumber> Plus(TNumber value) => From(Value + value);
     public Positive<TNumber> Multiply(TNumber value)
     {
         NegativeException<TNumber>.ThrowIfIsNegative(value);

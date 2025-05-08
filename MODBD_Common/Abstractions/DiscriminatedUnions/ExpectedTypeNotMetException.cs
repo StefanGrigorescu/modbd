@@ -11,7 +11,7 @@ public sealed class ExpectedTypeNotMetException<TType> : ValueObjectException
     public static ExpectedType WithExpectedType(TType expectedType)
         => new(expectedType.Name);
 
-    public static ExpectedType WithExpectedType(string expectedType)
+    public static ExpectedType WithExpectedType(string expectedType) 
         => new(expectedType);
 
     public void ThrowIfIsExpectedTypeNotMet()
@@ -42,7 +42,7 @@ public sealed class ExpectedTypeNotMetException<TType> : ValueObjectException
         public ExpectedTypeNotMetException<TType> WithActualType(TType actualType) =>
             new(_expectedType, actualType.Name);
 
-        public ExpectedTypeNotMetException<TType> WithActualType(string actualType) =>
+        public ExpectedTypeNotMetException<TType> WithActualType(string actualType) => 
             new(_expectedType, actualType);
     }
 }

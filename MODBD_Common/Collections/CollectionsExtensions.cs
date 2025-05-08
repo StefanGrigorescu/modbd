@@ -1,4 +1,7 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Diagnostics.CodeAnalysis;
+using MODBD_Common.Abstractions.Responses;
 
 namespace MODBD_Common.Collections;
 
@@ -12,7 +15,7 @@ public static class CollectionsExtensions
     /// <param name="collection">The collection of items.</param>
     /// <typeparam name="T">The type of the items in the collection.</typeparam>
     /// <returns>A number greater or equal to 0, representing the total number of items in the collection.</returns>
-    public static int CountItems<T>(this IEnumerable<T> collection) =>
+    public static int CountItems<T>(this IEnumerable<T> collection) => 
         collection.IsNullOrEmpty() ? 0 : collection.Count();
 
     /// <summary>
@@ -58,20 +61,13 @@ public static class CollectionsExtensions
 
     public static bool DictionaryAndHashSetKeysMatch<TKey, TValue>(
         this IReadOnlyDictionary<TKey, TValue> dict,
-        HashSet<TKey> set)
-        where TKey : IEquatable<TKey>
-    {
-        if (dict.IsNullOrEmpty())
-        {
-            return set.SetEquals(new HashSet<TKey>());
-        }
-
-        HashSet<TKey>? dictKeys = dict
-            .Select(kvp => kvp.Key)
-            .ToHashSet();
-
-        return set.SetEquals(dictKeys);
-    }
+        HashSet<TKey> set
+    ) where TKey : IEquatable<TKey> =>
+        dict.IsNullOrEmpty() ?
+            set.IsNullOrEmpty() :
+            set.SetEquals(
+                dict.Select(kvp => kvp.Key)
+            );
 
     public static IDictionary<TKey, TValue> AddKvp<TKey, TValue>(this IDictionary<TKey, TValue> dict, KeyValuePair<TKey, TValue> kvp)
     {
@@ -79,70 +75,124 @@ public static class CollectionsExtensions
         return dict;
     }
 
-    public static bool IReadOnlyListEqual<T>(this IReadOnlyList<T>? left, IReadOnlyList<T>? right)
+    public static IDictionary<TKey, TValue> AddKvp<TKey, TValue>(this IDictionary<TKey, TValue> dict, TKey key, TValue value)
     {
-        if ((object?)left is null && (object?)right is null)
-        {
-            return true;
-        }
-
-        if ((object?)left is null || (object?)right is null)
-        {
-            return false;
-        }
-
-        return left.SequenceEqual(right);
+        dict.Add(key, value);
+        return dict;
     }
 
-    public static bool IReadOnlyDictionaryEqual<TKey, TValue>(this IReadOnlyDictionary<TKey, TValue>? left, IReadOnlyDictionary<TKey, TValue>? right)
-    {
-        if ((object?)left is null && (object?)right is null)
-        {
-            return true;
-        }
+    public static bool IReadOnlyListContainsSameElements<T>(this IReadOnlyList<T>? left, IReadOnlyList<T>? right) =>
+        (left is null && right is null) || (
+            left is not null &&
+            right is not null &&
+            left.Count == right.Count && // The collections have the same number of elements and
+            !left.Any((T element) =>       // there is no element in the left collection 
+                !right.Contains(element)   // that is not contained in the right collection too
+            )
+        );
 
-        if ((object?)left is null || (object?)right is null)
-        {
-            return false;
-        }
+    public static bool IReadOnlyListEqual<T>(this IReadOnlyList<T>? left, IReadOnlyList<T>? right) =>
+        (left is null && right is null) || (
+            left is not null &&
+            right is not null &&
+            left.SequenceEqual(right)
+        );
 
-        return left.SequenceEqual(right);
-    }
+    public static bool IReadOnlyDictionaryEqual<TKey, TValue>(this IReadOnlyDictionary<TKey, TValue>? left, IReadOnlyDictionary<TKey, TValue>? right) =>
+        (left is null && right is null) || (
+            left is not null &&
+            right is not null &&
+            left.SequenceEqual(right)
+        );
+
+    public static bool IReadOnlySetEqual<TItem>(this IReadOnlySet<TItem>? left, IReadOnlySet<TItem>? right) =>
+        (left is null && right is null) || (
+            left is not null &&
+            right is not null &&
+            left.SetEquals(right)
+        );
 
     public static int IReadOnlyListHashCode<T>(this IReadOnlyList<T> collection) =>
         collection.Aggregate(
             0,
-            (acc, crt) => HashCode.Combine(acc, crt?.GetHashCode())
+            (int acc, T crt) => HashCode.Combine(acc, crt?.GetHashCode())
         );
 
     public static int IReadOnlyDictionaryHashCode<TKey, TValue>(this IReadOnlyDictionary<TKey, TValue> collection) =>
         collection.Aggregate(
             0,
-            (acc, crt) => HashCode.Combine(acc, crt.GetHashCode())
+            (int acc, KeyValuePair<TKey, TValue> crt) => HashCode.Combine(acc, crt.GetHashCode())
         );
 
-    public static bool IsACollectionType(this Type type)
-    {
-        if (type == typeof(string))
-        {
-            return false;
-        }
+    public static int IReadOnlySetHashCode<TItem>(this IReadOnlySet<TItem> collection) =>
+        collection
+            .OrderBy(item => item?.GetHashCode())
+            .Aggregate(
+                0,
+                (int acc, TItem crt) => HashCode.Combine(acc, crt?.GetHashCode())
+            );
 
-        if (type == typeof(Array) ||
+    public static bool IsACollectionType(this Type type) =>
+        (type != typeof(string)) && (
             type.IsArray ||
-            type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IEnumerable<>) ||
-            type.IsAssignableTo(typeof(IEnumerable<>))
-        )
+            type == typeof(Array) ||
+            IsIEnumerableOrAssignableToIt(type) ||
+            type
+                .GetInterfaces()
+                .Any(IsIEnumerableOrAssignableToIt) ||
+            (type.BaseType?.IsACollectionType() ?? false)
+        );
+
+    private static bool IsIEnumerableOrAssignableToIt(Type type) =>
+        (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IEnumerable<>)) ||
+        type.IsAssignableTo(typeof(IEnumerable<>));
+
+    public static bool IsAMutableCollectionType(this Type type) =>
+        (type != typeof(string)) && (
+            type.IsArray ||
+            IsInMutableCollectionTypesOrAssignableToAnyOfThem(type) ||
+            type
+                .GetInterfaces()
+                .Any(IsInMutableCollectionTypesOrAssignableToAnyOfThem) ||
+            (type.BaseType?.IsAMutableCollectionType() ?? false)
+        );
+
+    private static bool IsInMutableCollectionTypesOrAssignableToAnyOfThem(Type type)
+    {
+        if(type.IsGenericType)
         {
-            return true;
+            Type genericTypeDefinition = type.GetGenericTypeDefinition();
+            if(_mutableCollectionTypes.Contains(genericTypeDefinition))
+            {
+                return true;
+            }
         }
-
-        Type[] interfaces = type.GetInterfaces();
-
-        return interfaces.Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IEnumerable<>)) ||
-            interfaces.Any(i => i.IsAssignableTo(typeof(IEnumerable<>))) ||
-            (type.BaseType?.IsACollectionType() ?? false);
+        return _mutableCollectionTypes.Any(type.IsAssignableTo);
     }
+
+    private static readonly AppReadOnlySet<Type> _mutableCollectionTypes = AppReadOnlySet<Type>.New([
+        typeof(Collection< >),
+        typeof(Array),
+        typeof(List < >),
+        typeof(Dictionary <, >),
+        typeof(HashSet < >),
+        typeof(Stack < >),
+        typeof(Queue < >),
+        typeof(SortedList <, >),
+        typeof(SortedDictionary <, >),
+        typeof(SortedSet < >),
+    ]);
+
+    //private static readonly AppReadOnlySet<Type> _immutableCollectionTypes = AppReadOnlySet<Type>.New([
+    //    typeof(ReadOnlyCollection< >),
+    //    typeof(ReadOnlyDictionary <, >),
+    //    typeof(AppReadOnlyList<>),
+    //    typeof(AppReadOnlyDictionary <, >),
+    //    typeof(AppReadOnlySet < >),
+    //    typeof(AppImmutableList<>),
+    //    typeof(AppImmutableDictionary <, >),
+    //    typeof(AppImmutableSet < >),
+    //]);
 
     /// <summary>
     /// Checks whether <paramref name="collection"/> is null or empty.
@@ -151,7 +201,7 @@ public static class CollectionsExtensions
     /// <param name="collection">The <see cref="IEnumerable{T}"/> to be checked.</param>
     /// <returns>True if <paramref name="collection"/> is null or empty, false otherwise.</returns>
     public static bool IsNullOrEmpty<T>(
-        [NotNullWhen(false)] this IEnumerable<T>? collection
-    ) =>
+        [NotNullWhen(false)] this IEnumerable<T>? collection    
+    ) => 
         collection is null || !collection.Any();
 }

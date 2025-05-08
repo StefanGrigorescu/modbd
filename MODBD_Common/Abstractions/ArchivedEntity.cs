@@ -25,7 +25,7 @@ public abstract class ArchivedEntity
 /// <typeparam name="TEntity">Entity type.</typeparam>
 /// <typeparam name="TEntityId">Entity id type.</typeparam>
 /// <typeparam name="TEntityIdValue">Entity id inner <see cref="IEntityId{TValue}.Value"/> property type.</typeparam>
-public abstract class ArchivedEntity<TEntity, TEntityId, TEntityIdValue> :
+public abstract class ArchivedEntity<TEntity, TEntityId, TEntityIdValue> : 
     ArchivedEntity, IEquatable<ArchivedEntity<TEntity, TEntityId, TEntityIdValue>>
     where TEntity : Entity<TEntityId, TEntityIdValue>
     where TEntityId : EntityId<TEntityIdValue>
@@ -39,24 +39,15 @@ public abstract class ArchivedEntity<TEntity, TEntityId, TEntityIdValue> :
         Id.Equals(other.Id);
 
     public override bool Equals(object? obj) =>
-        obj is not null &&
         obj is ArchivedEntity<TEntity, TEntityId, TEntityIdValue> other &&
         ((IEquatable<ArchivedEntity<TEntity, TEntityId, TEntityIdValue>>)this).Equals(other);
 
-    public static bool operator ==(ArchivedEntity<TEntity, TEntityId, TEntityIdValue> left, ArchivedEntity<TEntity, TEntityId, TEntityIdValue> right)
-    {
-        if ((object?)left is null && (object?)right is null)
-        {
-            return true;
-        }
-
-        if ((object?)left is null || (object?)right is null)
-        {
-            return false;
-        }
-
-        return left.Equals(right);
-    }
+    public static bool operator ==(ArchivedEntity<TEntity, TEntityId, TEntityIdValue> left, ArchivedEntity<TEntity, TEntityId, TEntityIdValue> right) =>
+        (left is null && right is null) || (
+            left is not null &&
+            right is not null &&
+            left.Equals(right)
+        );
 
     public static bool operator !=(ArchivedEntity<TEntity, TEntityId, TEntityIdValue> left, ArchivedEntity<TEntity, TEntityId, TEntityIdValue> right) =>
         !(left == right);

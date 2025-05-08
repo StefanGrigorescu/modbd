@@ -1,9 +1,12 @@
 ﻿using System.Numerics;
 using System.Runtime.CompilerServices;
+using MODBD_Common.Abstractions;
 
 namespace MODBD_Common.NumericTypes.Ranges;
 
-public sealed record NumberRange<TNumber> : INumberSet<TNumber>
+public sealed record NumberRange<TNumber> : 
+    INumberSet<TNumber>,
+    IImmutable
     where TNumber : struct, INumber<TNumber>, IMinMaxValue<TNumber>
 {
     public required ILowerBound<TNumber> LowerBound { get; init; }

@@ -8,6 +8,6 @@ public sealed class EntityNotFoundException<TEntity> : DomainObjectException
         base($"{typeof(TEntity).Name} with id {entityId} was not found!")
     { }
 
-    public static string MessageFor(object entityId) =>
+    public static string MessageFor(object entityId) => 
         $"{typeof(TEntity).Name} with id {entityId} was not found!";
 }
