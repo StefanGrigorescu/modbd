@@ -101,6 +101,117 @@ EXCEPTION
 END;
 /
 
+-- Modified INSERT_USER procedure for fragmented IDNT_USERS table
+CREATE OR REPLACE PROCEDURE INSERT_USER (
+    p_username IN NVARCHAR2,
+    p_first_name IN NVARCHAR2,
+    p_last_name IN NVARCHAR2,
+    p_date_of_birth IN DATE,
+    p_email IN VARCHAR2,
+    p_phone_number IN VARCHAR2,
+    p_password IN VARCHAR2,
+    p_salt IN VARCHAR2,
+    p_roles_csv IN VARCHAR2,
+    p_region IN VARCHAR2, -- Region to determine which regional table to insert into
+    p_user_created OUT NUMBER -- New OUT parameter
+) IS
+    user_exists NUMBER := 0;
+    user_id NUMBER;
+BEGIN
+    -- Check if the user already exists by username or email
+    SELECT COUNT(*) INTO user_exists
+    FROM IDNT_USERS
+    WHERE UPPER(username) = UPPER(p_username)
+    OR UPPER(email) = UPPER(p_email);
+
+    IF user_exists = 0 THEN
+        -- Insert login info into the global IDNT_USERS table
+        INSERT INTO IDNT_USERS (
+            email, password, salt
+        ) VALUES (
+            p_email, p_password, p_salt
+        ) RETURNING id INTO user_id;
+
+        -- Log success for global insertion
+        LOG_INFORMATION('INSERT_USER: Login info for user ' || p_email || ' created in global.');
+
+        IF p_region = 'MUNTENIA' THEN
+            INSERT INTO IDNT_USERS@ESHOP_MUNTENIA_LINK (
+                id, username, first_name, last_name, date_of_birth, phone_number, created_on, last_updated_on
+            ) VALUES (
+                user_id, p_username, p_first_name, p_last_name, p_date_of_birth, p_phone_number, SYSDATE, SYSDATE
+            );
+        ELSIF p_region = 'ROMANIA' THEN
+            INSERT INTO IDNT_USERS@ESHOP_ROMANIA_LINK (
+                id, username, first_name, last_name, date_of_birth, phone_number, created_on, last_updated_on
+            ) VALUES (
+                user_id, p_username, p_first_name, p_last_name, p_date_of_birth, p_phone_number, SYSDATE, SYSDATE
+            );
+        ELSE
+            -- Log error if region is invalid
+            LOG_ERROR('INSERT_USER: Invalid region specified: ' || p_region);
+            RAISE_APPLICATION_ERROR(-20002, 'Invalid region specified: ' || p_region);
+        END IF;
+
+        -- Log success
+        LOG_INFORMATION('INSERT_USER: Profile info for user ' || p_email || ' created in region ' || p_region);
+
+        -- Split the roles CSV and insert each role
+        FOR role_name IN (SELECT REGEXP_SUBSTR(p_roles_csv, '[^,]+', 1, LEVEL) AS role_name
+                        FROM DUAL
+                        CONNECT BY REGEXP_SUBSTR(p_roles_csv, '[^,]+', 1, LEVEL) IS NOT NULL
+        ) LOOP
+            INSERT_USER_ROLE(user_id, role_name.role_name);
+        END LOOP;
+
+        -- Set OUT parameter
+        p_user_created := 1; -- User was successfully created
+    ELSE
+        -- Log user exists
+        LOG_DEBUG('INSERT_USER: User with email ' || p_email || ' already exists.');
+        p_user_created := 0; -- User already exists
+    END IF;
+
+    COMMIT;
+EXCEPTION
+    WHEN OTHERS THEN
+        LOG_ERROR('INSERT_USER: Error creating user ' || p_email || ': ' || SQLERRM);
+        ROLLBACK;
+        p_user_created := -1; -- Error occurred
+END;
+/
+
+CREATE OR REPLACE PROCEDURE INSERT_USER_ROLE (
+    p_user_id IN NUMBER,
+    p_role_name IN VARCHAR2
+) IS
+    role_id NUMBER;
+BEGIN
+    -- Check if the role exists
+    BEGIN
+        SELECT id INTO role_id
+        FROM IDNT_ROLES
+        WHERE UPPER(name) = UPPER(p_role_name);
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            role_id := NULL;
+    END;
+
+    IF role_id is NOT NULL THEN
+        -- Insert the user role if the role exists
+        INSERT INTO IDNT_USER_ROLES (user_id, role_id) 
+        VALUES (p_user_id, role_id);
+        LOG_INFORMATION('INSERT_USER_ROLE: Role ' || p_role_name || ' assigned to user ID ' || p_user_id);
+    ELSE
+        LOG_DEBUG('INSERT_USER_ROLE: Role ' || p_role_name || ' does not exist. No role assigned to user ID ' || p_user_id || '.');
+    END IF;
+
+    COMMIT;
+EXCEPTION
+    WHEN OTHERS THEN
+        LOG_ERROR('INSERT_USER_ROLE: Error assigning role ' || p_role_name || ' to user ID ' || p_user_id || ': ' || SQLERRM);
+END;
+/
 
 BEGIN
     TRY_CREATE_SHARD(
