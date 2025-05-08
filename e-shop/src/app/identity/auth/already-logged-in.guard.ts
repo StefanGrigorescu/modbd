@@ -1,5 +1,5 @@
 import { Injectable } from "@angular/core";
-import { ActivatedRouteSnapshot, CanActivate, CanActivateChild, Router, RouterStateSnapshot, UrlTree } from "@angular/router";
+import { ActivatedRouteSnapshot, Router, RouterStateSnapshot, UrlTree } from "@angular/router";
 import { Observable, map, take } from 'rxjs';
 import { User } from "../users/user.model";
 import { CurrentUserEvent } from "../users/current-user.event";
@@ -7,7 +7,7 @@ import { CurrentUserEvent } from "../users/current-user.event";
 @Injectable({
     providedIn: "root",
 })
-export class AlreadyLoggedInGuard implements CanActivate, CanActivateChild {
+export class AlreadyLoggedInGuard  {
     constructor (
         private readonly currentUserEvent: CurrentUserEvent,
         private readonly router: Router,
