@@ -113,10 +113,13 @@ CREATE OR REPLACE PROCEDURE INSERT_USER (
     p_salt IN VARCHAR2,
     p_roles_csv IN VARCHAR2,
     p_region IN VARCHAR2, -- Region to determine which regional table to insert into
-    p_user_created OUT NUMBER -- New OUT parameter
+    p_now IN DATE DEFAULT SYSDATE,
+    p_random IN NUMBER DEFAULT DBMS_RANDOM.VALUE,
+    p_user_created OUT NUMBER 
 ) IS
     user_exists NUMBER := 0;
     user_id NUMBER;
+    region_id NUMBER;
 BEGIN
     -- Check if the user already exists by username or email
     SELECT COUNT(*) INTO user_exists
@@ -125,35 +128,50 @@ BEGIN
     OR UPPER(email) = UPPER(p_email);
 
     IF user_exists = 0 THEN
+        -- Find region id by name
+        BEGIN
+            SELECT id 
+            INTO region_id
+            FROM IDNT_REGIONS
+            WHERE UPPER(name) = UPPER(p_region);
+        EXCEPTION
+            WHEN NO_DATA_FOUND THEN
+                LOG_ERROR('INSERT_USER: Region ' || p_region || ' not found.');
+                p_user_created := -1; -- Error occurred (region not found)
+                RETURN;
+        END;
+
+        user_id := New_Snowflake_Id (
+            p_region_id => region_id,
+            p_now => p_now,
+            p_random => p_random
+        );
+        
         -- Insert login info into the global IDNT_USERS table
         INSERT INTO IDNT_USERS (
-            email, password, salt
+            id, email, password, salt
         ) VALUES (
-            p_email, p_password, p_salt
+            user_id, p_email, p_password, p_salt
         ) RETURNING id INTO user_id;
 
         -- Log success for global insertion
         LOG_INFORMATION('INSERT_USER: Login info for user ' || p_email || ' created in global.');
 
-        IF p_region = 'MUNTENIA' THEN
+        IF region_id = 0 THEN
             INSERT INTO IDNT_USERS@ESHOP_MUNTENIA_LINK (
-                id, username, first_name, last_name, date_of_birth, phone_number, created_on, last_updated_on
+                id, username, first_name, last_name, date_of_birth, phone_number
             ) VALUES (
-                user_id, p_username, p_first_name, p_last_name, p_date_of_birth, p_phone_number, SYSDATE, SYSDATE
-            );
-        ELSIF p_region = 'ROMANIA' THEN
-            INSERT INTO IDNT_USERS@ESHOP_ROMANIA_LINK (
-                id, username, first_name, last_name, date_of_birth, phone_number, created_on, last_updated_on
-            ) VALUES (
-                user_id, p_username, p_first_name, p_last_name, p_date_of_birth, p_phone_number, SYSDATE, SYSDATE
+                user_id, p_username, p_first_name, p_last_name, p_date_of_birth, p_phone_number
             );
         ELSE
-            -- Log error if region is invalid
-            LOG_ERROR('INSERT_USER: Invalid region specified: ' || p_region);
-            RAISE_APPLICATION_ERROR(-20002, 'Invalid region specified: ' || p_region);
+            INSERT INTO IDNT_USERS@ESHOP_ROMANIA_LINK (
+                id, username, first_name, last_name, date_of_birth, phone_number
+            ) VALUES (
+                user_id, p_username, p_first_name, p_last_name, p_date_of_birth, p_phone_number
+            );
         END IF;
 
-        -- Log success
+        -- Log success for regional insertion
         LOG_INFORMATION('INSERT_USER: Profile info for user ' || p_email || ' created in region ' || p_region);
 
         -- Split the roles CSV and insert each role
@@ -167,7 +185,6 @@ BEGIN
         -- Set OUT parameter
         p_user_created := 1; -- User was successfully created
     ELSE
-        -- Log user exists
         LOG_DEBUG('INSERT_USER: User with email ' || p_email || ' already exists.');
         p_user_created := 0; -- User already exists
     END IF;
@@ -195,17 +212,14 @@ BEGIN
     EXCEPTION
         WHEN NO_DATA_FOUND THEN
             role_id := NULL;
+            LOG_ERROR('INSERT_USER_ROLE: Role ' || p_role_name || ' does not exist. No role assigned to user ID ' || p_user_id || '.');
+            RETURN;
     END;
 
-    IF role_id is NOT NULL THEN
-        -- Insert the user role if the role exists
-        INSERT INTO IDNT_USER_ROLES (user_id, role_id) 
-        VALUES (p_user_id, role_id);
-        LOG_INFORMATION('INSERT_USER_ROLE: Role ' || p_role_name || ' assigned to user ID ' || p_user_id);
-    ELSE
-        LOG_DEBUG('INSERT_USER_ROLE: Role ' || p_role_name || ' does not exist. No role assigned to user ID ' || p_user_id || '.');
-    END IF;
-
+    INSERT INTO IDNT_USER_ROLES (user_id, role_id) 
+    VALUES (p_user_id, role_id);
+    
+    LOG_INFORMATION('INSERT_USER_ROLE: Role ' || p_role_name || ' assigned to user ID ' || p_user_id);
     COMMIT;
 EXCEPTION
     WHEN OTHERS THEN
