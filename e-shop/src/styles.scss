@@ -1,10 +1,5 @@
 @use '@angular/material' as mat;
-@import '@angular/material/theming';
 
-@include mat.core();
-@include mat.legacy-core();
-
-// Color Palette
 $target-colors: (
     plumb-color: #330066,
     peach-color: #f29542,
