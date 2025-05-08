@@ -28,8 +28,8 @@ BEGIN
   IF INSERTING THEN
     v_sql := q'[
       INSERT INTO SLS_PRODUCTS@eshop_romania_link
-      (id, name, description, price_in_eur)
-      VALUES (:1, :2, :3, :4)
+      (id, name, description, price_in_eur, created_on)
+      VALUES (:1, :2, :3, :4, sysdate)
     ]';
     EXECUTE IMMEDIATE v_sql
       USING :NEW.id, :NEW.name, :NEW.description, :NEW.price_in_eur;
@@ -482,8 +482,8 @@ END;
 -- Test: Insert into the view
 BEGIN
     LOG_INFORMATION('Testing INSERT into vw_sls_products...');
-    INSERT INTO ESHOP_GLOBAL_USER.VW_SLS_PRODUCTS (id, name, description, price_in_eur)
-    VALUES (999, 'Test Product', 'This is a test product', 99.99);
+    INSERT INTO ESHOP_GLOBAL_USER.VW_SLS_PRODUCTS (id, name, description, price_in_eur, created_on)
+    VALUES (999, 'Test Product', 'This is a test product', 99.99, sysdate);
 
     COMMIT;
     LOG_INFORMATION('Insert completed.');
@@ -600,11 +600,11 @@ SELECT
 FROM IDNT_USERS g
 LEFT JOIN (
     SELECT 
-        id, username, first_name, last_name, date_of_birth, phone_number, created_on, last_updated_on
+        id, username, first_name, last_name, date_of_birth, phone_number, region_id, created_on, last_updated_on
     FROM IDNT_USERS@ESHOP_MUNTENIA_LINK
     UNION ALL
     SELECT 
-        id, username, first_name, last_name, date_of_birth, phone_number, created_on, last_updated_on
+        id, username, first_name, last_name, date_of_birth, phone_number, region_id, created_on, last_updated_on
     FROM IDNT_USERS@ESHOP_ROMANIA_LINK
 ) l ON g.id = l.id;
 
@@ -620,8 +620,8 @@ DECLARE
 BEGIN
     -- Determine the region
     v_region := CASE
-        WHEN INSERTING THEN :NEW.region
-        ELSE :OLD.region
+        WHEN INSERTING THEN :NEW.region_id
+        ELSE :OLD.region_id
     END;
 
     IF INSERTING THEN

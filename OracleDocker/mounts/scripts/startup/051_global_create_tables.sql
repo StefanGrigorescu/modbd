@@ -262,51 +262,73 @@ END;
 BEGIN
     TRY_CREATE_SHARD(
         'IDNT_REGIONS',
-        'SELECT *
-        FROM IDNT_REGIONS@eshop_oltp_link',
-        '', 'global_create_tables');
+        'SELECT * FROM IDNT_REGIONS@eshop_oltp_link',
+        '
+        ALTER TABLE IDNT_REGIONS ADD CONSTRAINT pk_idnt_regions PRIMARY KEY (id);
+        ALTER TABLE IDNT_REGIONS MODIFY id NUMBER GENERATED ALWAYS AS IDENTITY;
+        ALTER TABLE IDNT_REGIONS ADD CONSTRAINT uq_idnt_regions_name UNIQUE (name);
+        ALTER TABLE IDNT_REGIONS MODIFY created_on DATE DEFAULT SYSDATE NOT NULL;
+        ALTER TABLE IDNT_REGIONS MODIFY last_updated_on DATE DEFAULT NULL;
+        ', 'global_create_tables'
+    );
 
     TRY_CREATE_SHARD(
         'IDNT_CITIES',
-        'SELECT *
-        FROM IDNT_CITIES@eshop_oltp_link',
+        'SELECT * FROM IDNT_CITIES@eshop_oltp_link',
         '
-        ALTER TABLE IDNT_CITIES ADD CONSTRAINT fk_idnt_cities_idnt_regions FOREIGN KEY (region_id) REFERENCES IDNT_Regions(id);
-        ', 'global_create_tables');
+        ALTER TABLE IDNT_CITIES ADD CONSTRAINT pk_idnt_cities PRIMARY KEY (id);
+        ALTER TABLE IDNT_CITIES MODIFY id NUMBER GENERATED ALWAYS AS IDENTITY;
+        ALTER TABLE IDNT_CITIES ADD CONSTRAINT fk_idnt_cities_idnt_regions FOREIGN KEY (region_id) REFERENCES IDNT_REGIONS(id);
+        ALTER TABLE IDNT_CITIES MODIFY created_on DATE DEFAULT SYSDATE NOT NULL;
+        ALTER TABLE IDNT_CITIES MODIFY last_updated_on DATE DEFAULT NULL;
+        ', 'global_create_tables'
+    );
 
     TRY_CREATE_SHARD(
         'IDNT_ROLES',
-        'SELECT *
-        FROM IDNT_ROLES@eshop_oltp_link',
-        '', 'global_create_tables');
-    
+        'SELECT * FROM IDNT_ROLES@eshop_oltp_link',
+        '
+        ALTER TABLE IDNT_ROLES ADD CONSTRAINT pk_idnt_roles PRIMARY KEY (id);
+        ALTER TABLE IDNT_ROLES ADD CONSTRAINT uq_idnt_roles_name UNIQUE (name);
+        ALTER TABLE IDNT_ROLES MODIFY created_on DATE DEFAULT SYSDATE NOT NULL;
+        ALTER TABLE IDNT_ROLES MODIFY last_updated_on DATE DEFAULT NULL;
+        ', 'global_create_tables'
+    );
+
     TRY_CREATE_SHARD(
         'IDNT_USERS',
-        'SELECT 
-            id,
-            email,
-            password,
-            salt
-        FROM IDNT_USERS@eshop_oltp_link
-        ', 'global_create_tables');
+        'SELECT id, email, password, salt FROM IDNT_USERS@eshop_oltp_link',
+        '
+        ALTER TABLE IDNT_USERS ADD CONSTRAINT pk_idnt_users PRIMARY KEY (id);
+        ALTER TABLE IDNT_USERS ADD CONSTRAINT uq_idnt_users_email UNIQUE (email);
+        ALTER TABLE IDNT_USERS MODIFY created_on DATE DEFAULT SYSDATE NOT NULL;
+        ALTER TABLE IDNT_USERS MODIFY last_updated_on DATE DEFAULT NULL;
+        ', 'global_create_tables'
+    );
 
     TRY_CREATE_SHARD(
         'IDNT_USER_ROLES',
-        'SELECT *
-        FROM IDNT_USER_ROLES@eshop_oltp_link',
+        'SELECT * FROM IDNT_USER_ROLES@eshop_oltp_link',
         '
-        ALTER TABLE IDNT_USER_ROLES ADD CONSTRAINT fk_idnt_user_roles_idnt_users FOREIGN KEY (user_id) REFERENCES IDNT_Users(id);
-        ALTER TABLE IDNT_USER_ROLES ADD CONSTRAINT fk_idnt_user_roles_idnt_roles FOREIGN KEY (role_id) REFERENCES IDNT_Roles(id);
-        ', 'global_create_tables');
+        ALTER TABLE IDNT_USER_ROLES ADD CONSTRAINT pk_idnt_user_roles PRIMARY KEY (user_id, role_id);
+        ALTER TABLE IDNT_USER_ROLES ADD CONSTRAINT fk_idnt_user_roles_idnt_users FOREIGN KEY (user_id) REFERENCES IDNT_USERS(id);
+        ALTER TABLE IDNT_USER_ROLES ADD CONSTRAINT fk_idnt_user_roles_idnt_roles FOREIGN KEY (role_id) REFERENCES IDNT_ROLES(id);
+        ALTER TABLE IDNT_USER_ROLES MODIFY created_on DATE DEFAULT SYSDATE NOT NULL;
+        ', 'global_create_tables'
+    );
 
     TRY_CREATE_SHARD(
         'IDNT_USER_ADDRESSES',
-        'SELECT *
-        FROM IDNT_USER_ADDRESSES@eshop_oltp_link',
+        'SELECT * FROM IDNT_USER_ADDRESSES@eshop_oltp_link',
         '
-        ALTER TABLE IDNT_USER_ADDRESSES ADD CONSTRAINT fk_idnt_user_addresses_idnt_users FOREIGN KEY (user_id) REFERENCES IDNT_Users(id);
-        ALTER TABLE IDNT_USER_ADDRESSES ADD CONSTRAINT fk_idnt_user_addresses_idnt_cities FOREIGN KEY (city_id) REFERENCES IDNT_Cities(id);
-        ', 'global_create_tables');
+        ALTER TABLE IDNT_USER_ADDRESSES ADD CONSTRAINT pk_idnt_user_addresses PRIMARY KEY (id);
+        ALTER TABLE IDNT_USER_ADDRESSES MODIFY id NUMBER GENERATED ALWAYS AS IDENTITY;
+        ALTER TABLE IDNT_USER_ADDRESSES ADD CONSTRAINT fk_idnt_user_addresses_idnt_users FOREIGN KEY (user_id) REFERENCES IDNT_USERS(id);
+        ALTER TABLE IDNT_USER_ADDRESSES ADD CONSTRAINT fk_idnt_user_addresses_idnt_cities FOREIGN KEY (city_id) REFERENCES IDNT_CITIES(id);
+        ALTER TABLE IDNT_USER_ADDRESSES MODIFY created_on DATE DEFAULT SYSDATE NOT NULL;
+        ALTER TABLE IDNT_USER_ADDRESSES MODIFY last_updated_on DATE DEFAULT NULL;
+        ', 'global_create_tables'
+    );
 
     TRY_CREATE_SHARD(
         'IDNT_INVITATION_LINKS_WITH_ROLE',
