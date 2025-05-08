@@ -1,4 +1,6 @@
-﻿namespace MODBD_Core.IO;
+﻿using System.Text;
+
+namespace MODBD_Core.IO;
 
 public interface IOutput
 {
@@ -24,13 +26,15 @@ public sealed class FileOutput : IOutput, IDisposable
 
     public void Dispose()
     {
+        _writer.Flush();
+        _writer.Close();
         _writer.Dispose();
     }
 
     public FileOutput(string filePath)
     {
         _filePath = filePath;
-        _writer = new(_filePath, true);
+        _writer = new(_filePath, true, encoding: Encoding.UTF8);
     }
 }
 
