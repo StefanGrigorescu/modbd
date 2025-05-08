@@ -39,7 +39,7 @@ CREATE OR REPLACE PROCEDURE LOG_DEBUG (
 ) IS
 BEGIN
     INSERT INTO ESHOP_MUNTENIA_LOGS (message, message_type, created_by, created_at, current_user)
-    VALUES (message, 'D', created_by, SYSDATE, USER);
+    VALUES (SUBSTR(message, 1, 255), 'D', created_by, SYSDATE, USER);
     DBMS_OUTPUT.PUT_LINE('[' || TO_CHAR(SYSDATE, 'YYYY-MM-DD HH24:MI:SS') || '] DEBUG: ' || message || ' | Created by: ' || created_by || ' | Current user: ' || USER);
 END;
 /
@@ -50,7 +50,7 @@ CREATE OR REPLACE PROCEDURE LOG_INFORMATION (
 ) IS
 BEGIN
     INSERT INTO ESHOP_MUNTENIA_LOGS (message, message_type, created_by, created_at, current_user)
-    VALUES (message, 'I', created_by, SYSDATE, USER);
+    VALUES (SUBSTR(message, 1, 255), 'I', created_by, SYSDATE, USER);
     DBMS_OUTPUT.PUT_LINE('[' || TO_CHAR(SYSDATE, 'YYYY-MM-DD HH24:MI:SS') || '] INFO: ' || message || ' | Created by: ' || created_by || ' | Current user: ' || USER);
 END;
 /
@@ -61,7 +61,7 @@ CREATE OR REPLACE PROCEDURE LOG_WARNING (
 ) IS
 BEGIN
     INSERT INTO ESHOP_MUNTENIA_LOGS (message, message_type, created_by, created_at, current_user)
-    VALUES (message, 'W', created_by, SYSDATE, USER);
+    VALUES (SUBSTR(message, 1, 255), 'W', created_by, SYSDATE, USER);
     DBMS_OUTPUT.PUT_LINE('[' || TO_CHAR(SYSDATE, 'YYYY-MM-DD HH24:MI:SS') || '] WARNING: ' || message || ' | Created by: ' || created_by || ' | Current user: ' || USER);
 END;
 /
@@ -72,7 +72,7 @@ CREATE OR REPLACE PROCEDURE LOG_ERROR (
 ) IS
 BEGIN
     INSERT INTO ESHOP_MUNTENIA_LOGS (message, message_type, created_by, created_at, current_user)
-    VALUES (message, 'E', created_by, SYSDATE, USER);
+    VALUES (SUBSTR(message, 1, 255), 'E', created_by, SYSDATE, USER);
     DBMS_OUTPUT.PUT_LINE('[' || TO_CHAR(SYSDATE, 'YYYY-MM-DD HH24:MI:SS') || '] ERROR: ' || message || ' | Created by: ' || created_by || ' | Current user: ' || USER);
 END;
 /
@@ -83,7 +83,7 @@ CREATE OR REPLACE PROCEDURE LOG_CRITICAL (
 ) IS
 BEGIN
     INSERT INTO ESHOP_MUNTENIA_LOGS (message, message_type, created_by, created_at, current_user)
-    VALUES (message, 'C', created_by, SYSDATE, USER);
+    VALUES (SUBSTR(message, 1, 255), 'C', created_by, SYSDATE, USER);
     DBMS_OUTPUT.PUT_LINE('[' || TO_CHAR(SYSDATE, 'YYYY-MM-DD HH24:MI:SS') || '] CRITICAL: ' || message || ' | Created by: ' || created_by || ' | Current user: ' || USER);
 END;
 /

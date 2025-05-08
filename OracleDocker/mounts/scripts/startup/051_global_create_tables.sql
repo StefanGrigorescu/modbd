@@ -6,6 +6,26 @@ ALTER SESSION SET CONTAINER = eshop_global;
 -- Set the schema to the desired user
 ALTER SESSION SET CURRENT_SCHEMA = ESHOP_GLOBAL_USER;
 
+CREATE OR REPLACE FUNCTION New_Snowflake_Id (
+    p_now IN TIMESTAMP,
+    p_region_id IN NUMBER,
+    p_random IN NUMBER
+) RETURN NUMBER IS
+BEGIN
+    -- Generate the order ID in the format "{year:4}{month:2}{day:2}{region_id:2}{random:12}"
+    RETURN TO_NUMBER(
+        TO_CHAR(p_now, 'YYYYMMDD') || 
+        LPAD(p_region_id, 2, '0') || 
+        LPAD(p_random, 12, '0')
+    );
+EXCEPTION
+    WHEN OTHERS THEN
+        LOG_ERROR('New_Snowflake_Id: Error generating snowflake ID: ' || SQLERRM);
+        RETURN NULL;
+END;
+/
+
+
 CREATE OR REPLACE PROCEDURE TRY_CREATE_TABLE (
     tbl_name IN VARCHAR2,
     cols_and_constraints_csv IN VARCHAR2,
@@ -122,10 +142,22 @@ CREATE OR REPLACE PROCEDURE INSERT_USER (
     region_id NUMBER;
 BEGIN
     -- Check if the user already exists by username or email
-    SELECT COUNT(*) INTO user_exists
+    SELECT COUNT(*) 
+    INTO user_exists
     FROM IDNT_USERS
-    WHERE UPPER(username) = UPPER(p_username)
-    OR UPPER(email) = UPPER(p_email);
+    WHERE UPPER(email) = UPPER(p_email);
+
+    IF user_exists = 0 THEN
+        SELECT COUNT(*) INTO user_exists
+        FROM IDNT_USERS@ESHOP_MUNTENIA_LINK
+        WHERE UPPER(username) = UPPER(p_username);
+    END IF;
+    
+    IF user_exists = 0 THEN
+        SELECT COUNT(*) INTO user_exists
+        FROM IDNT_USERS@ESHOP_ROMANIA_LINK
+        WHERE UPPER(username) = UPPER(p_username);
+    END IF;
 
     IF user_exists = 0 THEN
         -- Find region id by name

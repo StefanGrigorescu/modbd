@@ -4,26 +4,6 @@ ALTER SESSION SET CONTAINER = eshop_oltp;
 
 ALTER SESSION SET CURRENT_SCHEMA = ESHOP_OLTP_USER;
 
-CREATE OR REPLACE FUNCTION New_Snowflake_Id (
-    p_now IN TIMESTAMP,
-    p_region_id IN NUMBER,
-    p_random IN NUMBER
-) RETURN NUMBER IS
-BEGIN
-    -- Generate the order ID in the format "{year:4}{month:2}{day:2}{region_id:2}{random:12}"
-    RETURN TO_NUMBER(
-        TO_CHAR(p_now, 'YYYYMMDD') || 
-        LPAD(p_region_id, 2, '0') || 
-        LPAD(p_random, 12, '0')
-    );
-EXCEPTION
-    WHEN OTHERS THEN
-        LOG_ERROR('New_Snowflake_Id: Error generating snowflake ID: ' || SQLERRM);
-        RETURN NULL;
-END;
-/
-
-
 CREATE OR REPLACE PROCEDURE INSERT_CITY (
     p_region_id IN NUMBER,
     p_city_name IN NVARCHAR2
@@ -503,8 +483,7 @@ BEGIN
 END;
 /
 
-
-CREATE OR REPLACE FUNCTION INSERT_USER_ADDRESS (
+CREATE OR REPLACE PROCEDURE INSERT_USER_ADDRESS (
     p_user_id IN NUMBER,
     p_region_id IN NUMBER,
     p_city_name IN NVARCHAR2,
@@ -512,7 +491,8 @@ CREATE OR REPLACE FUNCTION INSERT_USER_ADDRESS (
     p_str_number IN NUMBER,
     p_postal_code IN VARCHAR2,
     p_other_details IN NVARCHAR2 DEFAULT NULL,
-) RETURN NUMBER IS
+    is_success OUT NUMBER
+) IS
     city_id NUMBER;
 BEGIN
     -- Check if the city exists in the specified region
@@ -527,26 +507,27 @@ BEGIN
     EXCEPTION
         WHEN NO_DATA_FOUND THEN
             city_id := NULL;
-    END;
-
-    IF city_id IS NOT NULL THEN
+            is_success := 0; -- City does not exist
+            RETURN;
+    END;        
+    
+    -- Insert the address
+    BEGIN
         INSERT INTO IDNT_USER_ADDRESSES (
             user_id, city_id, street, str_number, postal_code, other_details
         ) VALUES (
             p_user_id, city_id, p_street, p_str_number, p_postal_code, p_other_details
         );
         LOG_INFORMATION('INSERT_USER_ADDRESS: Address created for user ID ' || p_user_id || '.');
-        RETURN 1;
-    ELSE
-        LOG_DEBUG('INSERT_USER_ADDRESS: City ' || p_city_name || ' in region ' || p_region_name || ' does not exist. No address created for user ID ' || p_user_id || '.');
-        RETURN 0;
-    END IF;
-EXCEPTION
-    WHEN OTHERS THEN
-        LOG_ERROR('INSERT_USER_ADDRESS: Error creating address for user ID ' || p_user_id || ': ' || SQLERRM);
-    RETURN 0;
+        is_success := 1; -- Address successfully created
+    EXCEPTION
+        WHEN OTHERS THEN
+            LOG_ERROR('INSERT_USER_ADDRESS: Error creating address for user ID ' || p_user_id || ': ' || SQLERRM);
+            is_success := 0; -- Error occurred
+    END;
 END;
 /
+
 
 CREATE OR REPLACE PROCEDURE INSERT_CUSTOMER (
     p_username IN NVARCHAR2,
@@ -602,14 +583,15 @@ BEGIN
         );
         LOG_INFORMATION('INSERT_CUSTOMER: User ' || p_username || ' created.');
 
-        address_created := INSERT_USER_ADDRESS(
+        INSERT_USER_ADDRESS(
             p_user_id => user_id,
             p_region_id => customer_region_id,
             p_city_name => p_city_name,
             p_street => p_street,
             p_str_number => p_str_number,
             p_postal_code => p_postal_code,
-            p_other_details => p_other_details
+            p_other_details => p_other_details,
+            is_success => address_created
         );
 
         IF address_created = 1 THEN
