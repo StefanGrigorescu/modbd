@@ -1,12 +1,17 @@
 import { Component, Input, OnInit } from '@angular/core';
-import { ValidatorFn, Validators } from '@angular/forms';
+import { ValidatorFn, Validators, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { TextComponent } from '../text-component.model';
 import { AppButton } from 'src/ui-common/button.model';
+import { MatInput } from '@angular/material/input';
+import { NgIf } from '@angular/common';
+import { MatFormField, MatLabel, MatError, MatSuffix } from '@angular/material/form-field';
 
 @Component({
     selector: 'app-text-field-custom',
     templateUrl: './text-field-custom.component.html',
-    styleUrls: ['./text-field-custom.component.scss']
+    styleUrls: ['./text-field-custom.component.scss'],
+    standalone: true,
+    imports: [MatFormField, NgIf, MatLabel, MatInput, FormsModule, ReactiveFormsModule, MatError, MatSuffix]
 })
 export class TextFieldCustomComponent
     extends TextComponent

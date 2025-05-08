@@ -1,5 +1,9 @@
 {
     "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+        "source.organizeImports": "always",
+        "source.addMissingImports": "always",
+    },
     "editor.indentSize": "tabSize",
     "editor.detectIndentation": false,
     "html.format.wrapAttributes": "force-expand-multiline",

@@ -1,13 +1,18 @@
 import { Component, Input, OnInit } from '@angular/core';
-import { ValidatorFn, Validators } from '@angular/forms';
+import { ValidatorFn, Validators, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { TextFieldType, defaultTextFieldType, getTextFieldMaxLength } from '../text-field.type.enum';
 import { TextComponent } from '../text-component.model';
 import { AppButton } from 'src/ui-common/button.model';
+import { MatInput } from '@angular/material/input';
+import { NgIf } from '@angular/common';
+import { MatFormField, MatLabel, MatError, MatSuffix } from '@angular/material/form-field';
 
 @Component({
     selector: 'app-text-field',
     templateUrl: './text-field.component.html',
-    styleUrls: ['./text-field.component.scss']
+    styleUrls: ['./text-field.component.scss'],
+    standalone: true,
+    imports: [MatFormField, NgIf, MatLabel, MatInput, FormsModule, ReactiveFormsModule, MatError, MatSuffix]
 })
 export class TextFieldComponent
     extends TextComponent

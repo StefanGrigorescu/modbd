@@ -1,13 +1,18 @@
 import { Component, Input, OnInit } from '@angular/core';
-import { ValidatorFn, Validators } from '@angular/forms';
+import { ValidatorFn, Validators, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { getFirstValidationMessage } from '@forms/validation/get-first-validation-message.function';
 import { passwordMaxLength } from '@forms/text/text-max-lengths.const';
 import { TextComponent } from '@forms/text/text-component.model';
+import { NgIf } from '@angular/common';
+import { MatInput } from '@angular/material/input';
+import { MatFormField, MatLabel, MatError } from '@angular/material/form-field';
 
 @Component({
     selector: 'app-password',
     templateUrl: './password.component.html',
-    styleUrls: ['./password.component.scss']
+    styleUrls: ['./password.component.scss'],
+    standalone: true,
+    imports: [MatFormField, MatLabel, MatInput, FormsModule, ReactiveFormsModule, NgIf, MatError]
 })
 export class PasswordComponent
     extends TextComponent
