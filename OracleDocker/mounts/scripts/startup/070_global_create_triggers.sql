@@ -1,22 +1,18 @@
 SET SERVEROUTPUT ON;
 
--- Switch to the GLOBAL PDB
 ALTER SESSION SET CONTAINER = eshop_global;
 
--- Set the schema to the GLOBAL user
 ALTER SESSION SET CURRENT_SCHEMA = eshop_global_user;
 
--- Create a view for SLS_PRODUCTS
 CREATE OR REPLACE VIEW vw_sls_products (
-  id, name, description, price_in_eur
+  id, name, description, price_in_eur, created_on, last_updated_on
 ) AS
-SELECT id, name, description, price_in_eur
+SELECT id, name, description, price_in_eur, created_on, last_updated_on
   FROM SLS_PRODUCTS@eshop_romania_link
 UNION
-SELECT id, name, description, price_in_eur
+SELECT id, name, description, price_in_eur, created_on, last_updated_on
   FROM SLS_PRODUCTS@eshop_muntenia_link;
 
--- Log the creation of the view
 BEGIN
     LOG_INFORMATION('vw_sls_products: View created successfully.');
 END;
@@ -33,11 +29,11 @@ BEGIN
     v_sql := q'[
       INSERT INTO SLS_PRODUCTS@eshop_romania_link
       (id, name, description, price_in_eur, created_on)
-      VALUES (:1, :2, :3, :4, SYSDATE)
+      VALUES (:1, :2, :3, :4, sysdate)
     ]';
     EXECUTE IMMEDIATE v_sql
       USING :NEW.id, :NEW.name, :NEW.description, :NEW.price_in_eur;
-    EXECUTE IMMEDIATE REPLACE(v_sql, 'romania', 'muntenia')
+    EXECUTE IMMEDIATE REPLACE(v_sql, 'eshop_romania_link', 'eshop_muntenia_link')
       USING :NEW.id, :NEW.name, :NEW.description, :NEW.price_in_eur;
 
   ELSIF UPDATING THEN
@@ -48,7 +44,7 @@ BEGIN
     ]';
     EXECUTE IMMEDIATE v_sql
       USING :NEW.name, :NEW.description, :NEW.price_in_eur, :NEW.id;
-    EXECUTE IMMEDIATE REPLACE(v_sql, 'romania', 'muntenia')
+    EXECUTE IMMEDIATE REPLACE(v_sql, 'eshop_romania_link', 'eshop_muntenia_link')
       USING :NEW.name, :NEW.description, :NEW.price_in_eur, :NEW.id;
 
   ELSE  -- DELETING
@@ -56,7 +52,7 @@ BEGIN
       DELETE FROM SLS_PRODUCTS@eshop_romania_link WHERE id = :1
     ]';
     EXECUTE IMMEDIATE v_sql USING :OLD.id;
-    EXECUTE IMMEDIATE REPLACE(v_sql, 'romania', 'muntenia')
+    EXECUTE IMMEDIATE REPLACE(v_sql, 'eshop_romania_link', 'eshop_muntenia_link')
       USING :OLD.id;
   END IF;
 EXCEPTION
@@ -98,7 +94,7 @@ BEGIN
     ]';
     EXECUTE IMMEDIATE v_sql
       USING :NEW.id, :NEW.name;
-    EXECUTE IMMEDIATE REPLACE(v_sql, 'romania', 'muntenia')
+    EXECUTE IMMEDIATE REPLACE(v_sql, 'eshop_romania_link', 'eshop_muntenia_link')
       USING :NEW.id, :NEW.name;
   ELSIF UPDATING THEN
     v_sql := q'[
@@ -108,12 +104,12 @@ BEGIN
     ]';
     EXECUTE IMMEDIATE v_sql
       USING :NEW.name, :NEW.id;
-    EXECUTE IMMEDIATE REPLACE(v_sql, 'romania', 'muntenia')
+    EXECUTE IMMEDIATE REPLACE(v_sql, 'eshop_romania_link', 'eshop_muntenia_link')
       USING :NEW.name, :NEW.id;
   ELSE
     v_sql := q'[DELETE FROM SLS_PRODUCT_CATEGORIES@eshop_romania_link WHERE id = :1]';
     EXECUTE IMMEDIATE v_sql USING :OLD.id;
-    EXECUTE IMMEDIATE REPLACE(v_sql, 'romania', 'muntenia') USING :OLD.id;
+    EXECUTE IMMEDIATE REPLACE(v_sql, 'eshop_romania_link', 'eshop_muntenia_link') USING :OLD.id;
   END IF;
 EXCEPTION WHEN OTHERS THEN
   LOG_ERROR('trg_sync_vw_sls_product_categories failed: ' || SQLERRM);
@@ -145,7 +141,7 @@ BEGIN
     ]';
     EXECUTE IMMEDIATE v_sql
       USING :NEW.id, :NEW.category_id, :NEW.name;
-    EXECUTE IMMEDIATE REPLACE(v_sql, 'romania', 'muntenia')
+    EXECUTE IMMEDIATE REPLACE(v_sql, 'eshop_romania_link', 'eshop_muntenia_link')
       USING :NEW.id, :NEW.category_id, :NEW.name;
   ELSIF UPDATING THEN
     v_sql := q'[
@@ -155,12 +151,12 @@ BEGIN
     ]';
     EXECUTE IMMEDIATE v_sql
       USING :NEW.category_id, :NEW.name, :NEW.id;
-    EXECUTE IMMEDIATE REPLACE(v_sql, 'romania', 'muntenia')
+    EXECUTE IMMEDIATE REPLACE(v_sql, 'eshop_romania_link', 'eshop_muntenia_link')
       USING :NEW.category_id, :NEW.name, :NEW.id;
   ELSE
     v_sql := q'[DELETE FROM SLS_PRODUCT_SUBCATEGORIES@eshop_romania_link WHERE id = :1]';
     EXECUTE IMMEDIATE v_sql USING :OLD.id;
-    EXECUTE IMMEDIATE REPLACE(v_sql, 'romania', 'muntenia') USING :OLD.id;
+    EXECUTE IMMEDIATE REPLACE(v_sql, 'eshop_romania_link', 'eshop_muntenia_link') USING :OLD.id;
   END IF;
 EXCEPTION WHEN OTHERS THEN
   LOG_ERROR('trg_sync_vw_sls_product_subcategories failed: ' || SQLERRM);
@@ -192,7 +188,7 @@ BEGIN
     ]';
     EXECUTE IMMEDIATE v_sql
       USING :NEW.product_id, :NEW.subcategory_id;
-    EXECUTE IMMEDIATE REPLACE(v_sql, 'romania', 'muntenia')
+    EXECUTE IMMEDIATE REPLACE(v_sql, 'eshop_romania_link', 'eshop_muntenia_link')
       USING :NEW.product_id, :NEW.subcategory_id;
   ELSIF UPDATING THEN
     v_sql := q'[
@@ -202,13 +198,13 @@ BEGIN
     ]';
     EXECUTE IMMEDIATE v_sql
       USING :NEW.subcategory_id, :NEW.product_id;
-    EXECUTE IMMEDIATE REPLACE(v_sql, 'romania', 'muntenia')
+    EXECUTE IMMEDIATE REPLACE(v_sql, 'eshop_romania_link', 'eshop_muntenia_link')
       USING :NEW.subcategory_id, :NEW.product_id;
   ELSE
     v_sql := q'[DELETE FROM SLS_PRODUCT_PRODUCT_SUBCATEGORIES@eshop_romania_link 
                WHERE product_id = :1 AND subcategory_id = :2]';
     EXECUTE IMMEDIATE v_sql USING :OLD.product_id, :OLD.subcategory_id;
-    EXECUTE IMMEDIATE REPLACE(v_sql, 'romania', 'muntenia') 
+    EXECUTE IMMEDIATE REPLACE(v_sql, 'eshop_romania_link', 'eshop_muntenia_link') 
       USING :OLD.product_id, :OLD.subcategory_id;
   END IF;
 EXCEPTION WHEN OTHERS THEN
@@ -240,7 +236,7 @@ BEGIN
       VALUES (:1, :2, SYSDATE)
     ]';
     EXECUTE IMMEDIATE v_sql USING :NEW.id, :NEW.name;
-    EXECUTE IMMEDIATE REPLACE(v_sql, 'romania', 'muntenia') USING :NEW.id, :NEW.name;
+    EXECUTE IMMEDIATE REPLACE(v_sql, 'eshop_romania_link', 'eshop_muntenia_link') USING :NEW.id, :NEW.name;
   ELSIF UPDATING THEN
     v_sql := q'[
       UPDATE SLS_PRODUCT_TAGS@eshop_romania_link
@@ -248,11 +244,11 @@ BEGIN
       WHERE id = :2
     ]';
     EXECUTE IMMEDIATE v_sql USING :NEW.name, :NEW.id;
-    EXECUTE IMMEDIATE REPLACE(v_sql, 'romania', 'muntenia') USING :NEW.name, :NEW.id;
+    EXECUTE IMMEDIATE REPLACE(v_sql, 'eshop_romania_link', 'eshop_muntenia_link') USING :NEW.name, :NEW.id;
   ELSE
     v_sql := q'[DELETE FROM SLS_PRODUCT_TAGS@eshop_romania_link WHERE id = :1]';
     EXECUTE IMMEDIATE v_sql USING :OLD.id;
-    EXECUTE IMMEDIATE REPLACE(v_sql, 'romania', 'muntenia') USING :OLD.id;
+    EXECUTE IMMEDIATE REPLACE(v_sql, 'eshop_romania_link', 'eshop_muntenia_link') USING :OLD.id;
   END IF;
 EXCEPTION WHEN OTHERS THEN
   LOG_ERROR('trg_sync_vw_sls_product_tags failed: ' || SQLERRM);
@@ -283,7 +279,7 @@ BEGIN
       VALUES (:1, :2, SYSDATE)
     ]';
     EXECUTE IMMEDIATE v_sql USING :NEW.product_id, :NEW.tag_id;
-    EXECUTE IMMEDIATE REPLACE(v_sql, 'romania', 'muntenia') 
+    EXECUTE IMMEDIATE REPLACE(v_sql, 'eshop_romania_link', 'eshop_muntenia_link') 
       USING :NEW.product_id, :NEW.tag_id;
   ELSIF UPDATING THEN
     v_sql := q'[
@@ -292,13 +288,13 @@ BEGIN
       WHERE product_id = :2
     ]';
     EXECUTE IMMEDIATE v_sql USING :NEW.tag_id, :NEW.product_id;
-    EXECUTE IMMEDIATE REPLACE(v_sql, 'romania', 'muntenia') 
+    EXECUTE IMMEDIATE REPLACE(v_sql, 'eshop_romania_link', 'eshop_muntenia_link') 
       USING :NEW.tag_id, :NEW.product_id;
   ELSE
     v_sql := q'[DELETE FROM SLS_PRODUCT_PRODUCT_TAGS@eshop_romania_link 
                WHERE product_id = :1 AND tag_id = :2]';
     EXECUTE IMMEDIATE v_sql USING :OLD.product_id, :OLD.tag_id;
-    EXECUTE IMMEDIATE REPLACE(v_sql, 'romania', 'muntenia') 
+    EXECUTE IMMEDIATE REPLACE(v_sql, 'eshop_romania_link', 'eshop_muntenia_link') 
       USING :OLD.product_id, :OLD.tag_id;
   END IF;
 EXCEPTION WHEN OTHERS THEN
@@ -330,7 +326,7 @@ BEGIN
       VALUES (:1, :2, SYSDATE)
     ]';
     EXECUTE IMMEDIATE v_sql USING :NEW.id, :NEW.name;
-    EXECUTE IMMEDIATE REPLACE(v_sql, 'romania', 'muntenia') USING :NEW.id, :NEW.name;
+    EXECUTE IMMEDIATE REPLACE(v_sql, 'eshop_romania_link', 'eshop_muntenia_link') USING :NEW.id, :NEW.name;
   ELSIF UPDATING THEN
     v_sql := q'[
       UPDATE SLS_ORDER_STATUSES@eshop_romania_link
@@ -338,11 +334,11 @@ BEGIN
       WHERE id = :2
     ]';
     EXECUTE IMMEDIATE v_sql USING :NEW.name, :NEW.id;
-    EXECUTE IMMEDIATE REPLACE(v_sql, 'romania', 'muntenia') USING :NEW.name, :NEW.id;
+    EXECUTE IMMEDIATE REPLACE(v_sql, 'eshop_romania_link', 'eshop_muntenia_link') USING :NEW.name, :NEW.id;
   ELSE
     v_sql := q'[DELETE FROM SLS_ORDER_STATUSES@eshop_romania_link WHERE id = :1]';
     EXECUTE IMMEDIATE v_sql USING :OLD.id;
-    EXECUTE IMMEDIATE REPLACE(v_sql, 'romania', 'muntenia') USING :OLD.id;
+    EXECUTE IMMEDIATE REPLACE(v_sql, 'eshop_romania_link', 'eshop_muntenia_link') USING :OLD.id;
   END IF;
 EXCEPTION WHEN OTHERS THEN
   LOG_ERROR('trg_sync_vw_sls_order_statuses failed: ' || SQLERRM);
@@ -373,7 +369,7 @@ BEGIN
       VALUES (:1, :2, SYSDATE)
     ]';
     EXECUTE IMMEDIATE v_sql USING :NEW.id, :NEW.name;
-    EXECUTE IMMEDIATE REPLACE(v_sql, 'romania', 'muntenia') USING :NEW.id, :NEW.name;
+    EXECUTE IMMEDIATE REPLACE(v_sql, 'eshop_romania_link', 'eshop_muntenia_link') USING :NEW.id, :NEW.name;
   ELSIF UPDATING THEN
     v_sql := q'[
       UPDATE SLS_DISCOUNT_TYPES@eshop_romania_link
@@ -381,11 +377,11 @@ BEGIN
       WHERE id = :2
     ]';
     EXECUTE IMMEDIATE v_sql USING :NEW.name, :NEW.id;
-    EXECUTE IMMEDIATE REPLACE(v_sql, 'romania', 'muntenia') USING :NEW.name, :NEW.id;
+    EXECUTE IMMEDIATE REPLACE(v_sql, 'eshop_romania_link', 'eshop_muntenia_link') USING :NEW.name, :NEW.id;
   ELSE
     v_sql := q'[DELETE FROM SLS_DISCOUNT_TYPES@eshop_romania_link WHERE id = :1]';
     EXECUTE IMMEDIATE v_sql USING :OLD.id;
-    EXECUTE IMMEDIATE REPLACE(v_sql, 'romania', 'muntenia') USING :OLD.id;
+    EXECUTE IMMEDIATE REPLACE(v_sql, 'eshop_romania_link', 'eshop_muntenia_link') USING :OLD.id;
   END IF;
 EXCEPTION WHEN OTHERS THEN
   LOG_ERROR('trg_sync_vw_sls_discount_types failed: ' || SQLERRM);
@@ -416,7 +412,7 @@ BEGIN
       VALUES (:1, :2, SYSDATE)
     ]';
     EXECUTE IMMEDIATE v_sql USING :NEW.id, :NEW.name;
-    EXECUTE IMMEDIATE REPLACE(v_sql, 'romania', 'muntenia') USING :NEW.id, :NEW.name;
+    EXECUTE IMMEDIATE REPLACE(v_sql, 'eshop_romania_link', 'eshop_muntenia_link') USING :NEW.id, :NEW.name;
   ELSIF UPDATING THEN
     v_sql := q'[
       UPDATE SLS_DISCOUNT_REASONS@eshop_romania_link
@@ -424,11 +420,11 @@ BEGIN
       WHERE id = :2
     ]';
     EXECUTE IMMEDIATE v_sql USING :NEW.name, :NEW.id;
-    EXECUTE IMMEDIATE REPLACE(v_sql, 'romania', 'muntenia') USING :NEW.name, :NEW.id;
+    EXECUTE IMMEDIATE REPLACE(v_sql, 'eshop_romania_link', 'eshop_muntenia_link') USING :NEW.name, :NEW.id;
   ELSE
     v_sql := q'[DELETE FROM SLS_DISCOUNT_REASONS@eshop_romania_link WHERE id = :1]';
     EXECUTE IMMEDIATE v_sql USING :OLD.id;
-    EXECUTE IMMEDIATE REPLACE(v_sql, 'romania', 'muntenia') USING :OLD.id;
+    EXECUTE IMMEDIATE REPLACE(v_sql, 'eshop_romania_link', 'eshop_muntenia_link') USING :OLD.id;
   END IF;
 EXCEPTION WHEN OTHERS THEN
   LOG_ERROR('trg_sync_vw_sls_discount_reasons failed: ' || SQLERRM);
@@ -459,7 +455,7 @@ BEGIN
       VALUES (:1, :2, SYSDATE)
     ]';
     EXECUTE IMMEDIATE v_sql USING :NEW.id, :NEW.name;
-    EXECUTE IMMEDIATE REPLACE(v_sql, 'romania', 'muntenia') USING :NEW.id, :NEW.name;
+    EXECUTE IMMEDIATE REPLACE(v_sql, 'eshop_romania_link', 'eshop_muntenia_link') USING :NEW.id, :NEW.name;
   ELSIF UPDATING THEN
     v_sql := q'[
       UPDATE BLG_INVOICE_STATUSES@eshop_romania_link
@@ -467,11 +463,11 @@ BEGIN
       WHERE id = :2
     ]';
     EXECUTE IMMEDIATE v_sql USING :NEW.name, :NEW.id;
-    EXECUTE IMMEDIATE REPLACE(v_sql, 'romania', 'muntenia') USING :NEW.name, :NEW.id;
+    EXECUTE IMMEDIATE REPLACE(v_sql, 'eshop_romania_link', 'eshop_muntenia_link') USING :NEW.name, :NEW.id;
   ELSE
     v_sql := q'[DELETE FROM BLG_INVOICE_STATUSES@eshop_romania_link WHERE id = :1]';
     EXECUTE IMMEDIATE v_sql USING :OLD.id;
-    EXECUTE IMMEDIATE REPLACE(v_sql, 'romania', 'muntenia') USING :OLD.id;
+    EXECUTE IMMEDIATE REPLACE(v_sql, 'eshop_romania_link', 'eshop_muntenia_link') USING :OLD.id;
   END IF;
 EXCEPTION WHEN OTHERS THEN
   LOG_ERROR('trg_sync_vw_blg_invoice_statuses failed: ' || SQLERRM);
@@ -486,8 +482,8 @@ END;
 -- Test: Insert into the view
 BEGIN
     LOG_INFORMATION('Testing INSERT into vw_sls_products...');
-    INSERT INTO ESHOP_GLOBAL_USER.VW_SLS_PRODUCTS (id, name, description, price_in_eur)
-    VALUES (999, 'Test Product', 'This is a test product', 99.99);
+    INSERT INTO ESHOP_GLOBAL_USER.VW_SLS_PRODUCTS (id, name, description, price_in_eur, created_on)
+    VALUES (999, 'Test Product', 'This is a test product', 99.99, sysdate);
 
     COMMIT;
     LOG_INFORMATION('Insert completed.');
@@ -593,5 +589,88 @@ END;
 -- Final message
 BEGIN
     LOG_INFORMATION('All tests completed successfully.');
+END;
+/
+
+--Create view for IDNT_USERS
+CREATE OR REPLACE VIEW vw_idnt_users AS
+SELECT 
+    g.id, g.email, g.password, g.salt,
+    l.username, l.first_name, l.last_name, l.date_of_birth, l.phone_number, l.region_id, l.created_on, l.last_updated_on
+FROM IDNT_USERS g
+LEFT JOIN (
+    SELECT 
+        id, username, first_name, last_name, date_of_birth, phone_number, region_id, created_on, last_updated_on
+    FROM IDNT_USERS@ESHOP_MUNTENIA_LINK
+    UNION ALL
+    SELECT 
+        id, username, first_name, last_name, date_of_birth, phone_number, region_id, created_on, last_updated_on
+    FROM IDNT_USERS@ESHOP_ROMANIA_LINK
+) l ON g.id = l.id;
+
+--Trigger that inserts / deletes data from local if changes are made to global.
+--Due to vertical sharding, login related info is saved in global and profile related info
+--is saved into global
+CREATE OR REPLACE TRIGGER trg_sync_vw_idnt_users
+INSTEAD OF INSERT OR DELETE ON vw_idnt_users
+FOR EACH ROW
+DECLARE
+    v_region VARCHAR2(50); -- Use region name
+    v_generated_id NUMBER; -- Store the generated ID
+BEGIN
+    -- Determine the region
+    v_region := CASE
+        WHEN INSERTING THEN :NEW.region_id
+        ELSE :OLD.region_id
+    END;
+
+    IF INSERTING THEN
+        INSERT INTO IDNT_USERS (
+            email, password, salt
+        ) VALUES (
+            :NEW.email, :NEW.password, :NEW.salt
+        ) RETURNING id INTO v_generated_id;
+
+        IF v_region = 'MUNTENIA' THEN
+            INSERT INTO IDNT_USERS@ESHOP_MUNTENIA_LINK (
+                id, username, first_name, last_name, date_of_birth, phone_number, created_on, last_updated_on
+            ) VALUES (
+                v_generated_id, :NEW.username, :NEW.first_name, :NEW.last_name, :NEW.date_of_birth, :NEW.phone_number, SYSDATE, SYSDATE
+            );
+        ELSIF v_region = 'ROMANIA' THEN
+            INSERT INTO IDNT_USERS@ESHOP_ROMANIA_LINK (
+                id, username, first_name, last_name, date_of_birth, phone_number, created_on, last_updated_on
+            ) VALUES (
+                v_generated_id, :NEW.username, :NEW.first_name, :NEW.last_name, :NEW.date_of_birth, :NEW.phone_number, SYSDATE, SYSDATE
+            );
+        ELSE
+            RAISE_APPLICATION_ERROR(-20001, 'Invalid region. Cannot route data to local databases.');
+        END IF;
+
+    ELSE
+        DELETE FROM IDNT_USERS
+        WHERE id = :OLD.id;
+
+        IF v_region = 'MUNTENIA' THEN
+            DELETE FROM IDNT_USERS@ESHOP_MUNTENIA_LINK
+            WHERE id = :OLD.id;
+        ELSIF v_region = 'ROMANIA' THEN
+            DELETE FROM IDNT_USERS@ESHOP_ROMANIA_LINK
+            WHERE id = :OLD.id;
+        ELSE
+            RAISE_APPLICATION_ERROR(-20002, 'Invalid region. Cannot delete data from local databases.');
+        END IF;
+    END IF;
+EXCEPTION
+    WHEN OTHERS THEN
+        LOG_ERROR(
+            'trg_sync_vw_idnt_users failed: action='
+            || CASE
+                   WHEN INSERTING THEN 'INSERT'
+                   ELSE 'DELETE'
+               END
+            || ', err=' || SQLERRM
+        );
+        RAISE;
 END;
 /
