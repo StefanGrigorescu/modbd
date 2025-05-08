@@ -1,0 +1,16 @@
+<mat-form-field [appearance]="appearance">
+    <mat-label>
+        {{fieldTitle}}
+    </mat-label>
+    <input
+        matInput
+        [formControl]="control"
+        (blur)="updateValidationMessage()"
+        name="email"
+        type="email"
+        autocomplete="email"
+    />
+    <mat-error *ngIf="validationMessage">
+        {{ validationMessage ?? 'Invalid input!' }}
+    </mat-error>
+</mat-form-field>

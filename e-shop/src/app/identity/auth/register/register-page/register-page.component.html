@@ -1,0 +1,135 @@
+<div class="form-page">
+    <mat-card class="form-card">
+        <div class="logo-column">
+            <app-brand-logo />
+        </div>
+
+        <form
+            class="app-form"
+            [formGroup]="registerForm"
+            (ngSubmit)="onSubmit()"
+        >
+            <section
+                class="app-form-section"
+                formGroupName="userData"
+            >
+                <div>
+                    <app-email
+                        id="email"
+                        [control]="registerForm.emailControl"
+                        fieldTitle="Email"
+                        autocomplete="email"
+                    />
+                </div>
+
+                <div class="app-form-section-row-margin-bottom">
+                    <app-text-field
+                        id="first-name"
+                        [control]="registerForm.firstNameControl"
+                        textFieldType="sm"
+                        fieldTitle="First Name"
+                        inputName="first-name"
+                        autocomplete="first-name"
+                    />
+                </div>
+
+                <div class="app-form-section-row-margin-bottom">
+                    <app-text-field
+                        id="last-name"
+                        [control]="registerForm.lastNameControl"
+                        textFieldType="sm"
+                        fieldTitle="Last Name"
+                        inputName="last-name"
+                        autocomplete="last-name"
+                    />
+                </div>
+
+                <div class="app-form-section-row-margin-bottom">
+                    <app-text-field
+                        id="phone-number"
+                        [control]="registerForm.phoneNumberControl"
+                        textFieldType="sm"
+                        fieldTitle="Phone Number"
+                        inputName="phone-number"
+                        autocomplete="phone-number"
+                    />
+                </div>
+
+                <div class="app-form-section-row-margin-bottom">
+                    <mat-form-field>
+                        <input
+                            placeholder="Date of birth"
+                            name="Date of birth"
+                            matInput
+                            [matDatepicker]="picker"
+                            [formControl]="registerForm.dateOfBirthControl"
+                        >
+                        <mat-datepicker-toggle
+                            matSuffix
+                            [for]="picker"
+                        ></mat-datepicker-toggle>
+                        <mat-datepicker #picker></mat-datepicker>
+                    </mat-form-field>
+                </div>
+            </section>
+
+
+            <section
+                class="app-form-section"
+                formGroupName="secret"
+            >
+                <div class="app-form-section-row-margin-bottom">
+                    <app-password
+                        id="password"
+                        [control]="registerForm.passwordControl"
+                        fieldTitle="Password"
+                        autocomplete="off"
+                    />
+                </div>
+
+                <div>
+                    <app-password
+                        id="password"
+                        [control]="registerForm.confirmPasswordControl"
+                        fieldTitle="Confirm Password"
+                        autocomplete="off"
+                    />
+                </div>
+            </section>
+
+
+            <section class="app-form-section">
+                <div
+                    class="app-alert-danger"
+                    *ngIf="registerForm.errorMessage"
+                >
+                    <span>{{ registerForm.errorMessage }}</span>
+                </div>
+            </section>
+
+
+            <section class="app-form-section">
+
+                <div class="app-controls-row app-controls-row--right">
+                    <button
+                        type="submit"
+                        color="accent"
+                        mat-raised-button
+                        [matTooltip]="submitBtnTooltip"
+                        [disabled]="registerForm.invalid && registerForm.touched"
+                    >
+                        Register
+                    </button>
+                </div>
+
+                <a
+                    class="app-ref"
+                    routerLink="/auth/login"
+                >
+                    Already have an account? <wbr>Login now!
+                </a>
+
+            </section>
+        </form>
+    </mat-card>
+</div>

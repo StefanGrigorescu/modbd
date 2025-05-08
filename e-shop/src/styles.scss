@@ -1,0 +1,183 @@
+@use '@angular/material' as mat;
+@import '@angular/material/theming';
+
+@include mat.core();
+@include mat.legacy-core();
+
+// Color Palette
+$target-colors: (
+    plumb-color: #330066,
+    peach-color: #f29542,
+    berry-color: #d91e11,
+    gray-color: #808080,
+);
+
+$tones: 10, 20, 30, 40, 50, 60, 70, 80, 90;
+
+@mixin generate-color-var($key, $value) {
+    --#{$key}: #{$value};
+    --#{$key}-rgb: #{red($value)},
+    #{green($value)},
+    #{blue($value)};
+
+    @each $tone in $tones {
+        $scale-value: adjust-color($value, $lightness: calc($tone / 2 * 1%));
+        --#{$key}-light-#{$tone}: #{$scale-value};
+        --#{$key}-light-#{$tone}-rgb: #{red($scale-value)},
+        #{green($scale-value)},
+        #{blue($scale-value)};
+    }
+
+    @each $tone in $tones {
+        $scale-value: adjust-color($value, $lightness: calc(-1 * $tone / 2 * 1%));
+        --#{$key}-dark-#{$tone}: #{$scale-value};
+        --#{$key}-dark-#{$tone}-rgb: #{red($scale-value)},
+        #{green($scale-value)},
+        #{blue($scale-value)};
+    }
+}
+
+
+$peach-primary: mat.define-palette((50: #fff7ed,
+            100: #fdeed5,
+            200: #fbd5ab,
+            300: #f8bc82,
+            400: #f5a862,
+            500: #f29542, // Base peach color
+            600: #ef853a,
+            700: #eb7331,
+            800: #e76228,
+            900: #e2491a,
+            A100: #ffffff,
+            A200: #ffded0,
+            A400: #f5a862,
+            A700: #e2491a,
+            contrast: (50: rgba(0, 0, 0, 0.87),
+                100: rgba(0, 0, 0, 0.87),
+                200: rgba(0, 0, 0, 0.87),
+                300: rgba(0, 0, 0, 0.87),
+                400: rgba(0, 0, 0, 0.87),
+                500: rgba(0, 0, 0, 0.87), // High contrast for base peach color
+                600: white,
+                700: white,
+                800: white,
+                900: white,
+                A100: rgba(0, 0, 0, 0.87),
+                A200: rgba(0, 0, 0, 0.87),
+                A400: rgba(0, 0, 0, 0.87),
+                A700: white,
+            )));
+
+$plumb-accent: mat.define-palette((50: #ece6f2,
+            100: #c5b8db,
+            200: #9b89c2,
+            300: #715ba9,
+            400: #573699,
+            500: #330066, // Base plumb accent color
+            600: #2e005e,
+            700: #280056,
+            800: #22004e,
+            900: #17003f,
+            A100: #efebff,
+            A200: #d4ccff,
+            A400: #9b89ff,
+            A700: #7e69ff,
+            contrast: (50: rgba(0, 0, 0, 0.87),
+                100: rgba(0, 0, 0, 0.87),
+                200: rgba(0, 0, 0, 0.87),
+                300: white,
+                400: white,
+                500: white, // High contrast for plumb base color
+                600: white,
+                700: white,
+                800: white,
+                900: white,
+                A100: rgba(0, 0, 0, 0.87),
+                A200: rgba(0, 0, 0, 0.87),
+                A400: white,
+                A700: white)));
+
+$berry-warn: mat.define-palette((50: #f2d4d2,
+            100: #e8a3a0,
+            200: #de7d7c,
+            300: #d75e5a,
+            400: #d04946,
+            500: #d91e11, // Base warn color
+            600: #c31c0e,
+            700: #b2180c,
+            800: #a2150a,
+            900: #911309,
+            A100: #f2d4d2,
+            A200: #e8a3a0,
+            A400: #d04946,
+            A700: #b2180c,
+            contrast: (50: rgba(0, 0, 0, 0.87),
+                100: rgba(0, 0, 0, 0.87),
+                200: rgba(0, 0, 0, 0.87),
+                300: white,
+                400: white,
+                500: white, // High contrast for warn base color
+                600: white,
+                700: white,
+                800: white,
+                900: white,
+                A100: rgba(0, 0, 0, 0.87),
+                A200: rgba(0, 0, 0, 0.87),
+                A400: white,
+                A700: white)));
+
+$my-custom-theme: mat.define-light-theme((color: (primary: $peach-primary,
+                accent: $plumb-accent,
+                warn: $berry-warn ),
+            typography: mat.define-typography-config(),
+            density: 0));
+
+@include mat.all-component-themes($my-custom-theme);
+
+:root {
+    @each $key, $value in $target-colors {
+        @include generate-color-var($key, $value);
+    }
+
+    --frame-padding: .75rem;
+    --error-color: var(--berry-color);
+}
+
+body {
+    background-color: var(--gray-color-light-90);
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+}
+
+a {
+
+    // unvisited link
+    &:link {
+        color: var(--plumb-color-light-20);
+    }
+
+    // visited link
+    &:visited {
+        color: var(--plumb-color-dark-20);
+    }
+
+    // mouse over link
+    &:hover {
+        color: var(--plumb-color-dark-50);
+    }
+
+    // selected link
+    &:active {
+        color: var(--plumb-color-dark-50);
+    }
+}
+
+.app-alert-danger {
+    padding: .5rem;
+
+    border-color: rgba($color: var(--gray-color-light-20-rgb), $alpha: 0.1);
+    background-color: var(--gray-color-light-50);
+
+    font-size: 1.15rem;
+    color: var(--error-color);
+    text-shadow: 1px 1px 1px rgba(var(--gray-color-light-90-rgb), 0.3);
+}

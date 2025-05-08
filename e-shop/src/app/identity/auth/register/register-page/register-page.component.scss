@@ -1,0 +1,22 @@
+@import "../../../../../styles/app-forms.scss";
+
+.form-page {
+    display: flex;
+    justify-content: center;
+
+    & .form-card {
+        width: clamp(350px, 80vw, 700px);
+
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: 1fr;
+
+        & .logo-column {
+            --brand-logo-size: clamp(16px, 30vw, 256px);
+
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+    }
+}

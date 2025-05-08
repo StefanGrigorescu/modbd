@@ -1,0 +1,61 @@
+.form-card {
+    padding: var(--frame-padding);
+
+    & .app-form-section {
+        --_app-form-section-vertical-margin: var(--section-vertical-margin);
+        --_app-form-section-row-vertical-margin: var(--section-row-vertical-margin);
+
+        margin-top: var(--_app-form-section-vertical-margin);
+
+        // Adds a small distance between two section rows 
+        & .app-form-section-row-margin-bottom {
+            margin-bottom: var(--_app-form-section-row-vertical-margin);
+        }
+
+        // For rows that need to be distanced with margin bottom as much as a whole section
+        //  (to have space for error messages, for example) 
+        & .app-form-section-row-margin-bottom-extra {
+            margin-bottom: var(--_app-form-section-vertical-margin);
+        }
+
+        // For rows that need to be distanced with margin top as much as a whole section
+        //  (to have space for error messages, for example) 
+        & .app-form-section-row-margin-top-extra {
+            margin-top: var(--_app-form-section-vertical-margin);
+        }
+    }
+}
+
+.extra-space-for-error-messages {
+    margin-bottom: 2.25rem;
+}
+
+.app-controls-row {
+    --_padding-vertical: 10px;
+    min-height: 35px;
+
+    display: flex;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: var(--section-items-gap);
+
+    padding-top: var(--_padding-vertical);
+    padding-bottom: var(--_padding-vertical);
+
+    &.app-controls-row--right {
+        justify-content: right;
+    }
+}
+
+.app-ref {
+    display: block;
+    margin-top: var(--section-items-gap);
+    width: auto;
+    font-size: .95rem;
+}
+
+.app-ref-disabled {
+    width: auto;
+    font-size: .95rem;
+    color: var(--text-color-inactive);
+}
