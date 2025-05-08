@@ -191,7 +191,9 @@ END;
 CREATE OR REPLACE VIEW IDNT_CUSTOMERS AS
     SELECT u.*
     FROM IDNT_USERS u
-    LEFT OUTER JOIN IDNT_USER_ROLES ur 
-        ON u.id = ur.user_id
-    WHERE ur.user_id IS NULL;
+    WHERE NOT EXISTS (
+        SELECT 1
+        FROM IDNT_USER_ROLES ur
+        WHERE u.id = ur.user_id
+    );
 /
