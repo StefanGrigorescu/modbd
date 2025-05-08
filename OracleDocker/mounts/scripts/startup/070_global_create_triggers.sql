@@ -596,7 +596,7 @@ END;
 CREATE OR REPLACE VIEW vw_idnt_users AS
 SELECT 
     g.id, g.email, g.password, g.salt,
-    l.username, l.first_name, l.last_name, l.date_of_birth, l.phone_number, l.created_on, l.last_updated_on
+    l.username, l.first_name, l.last_name, l.date_of_birth, l.phone_number, l.region_id, l.created_on, l.last_updated_on
 FROM IDNT_USERS g
 LEFT JOIN (
     SELECT 
