@@ -12,14 +12,11 @@ CREATE OR REPLACE FUNCTION New_Snowflake_Id (
     p_random IN NUMBER
 ) RETURN NUMBER IS
 BEGIN
-    -- set p_random to its last 8 digits
-    p_random := MOD(p_random, 100000000);
-
     -- Generate the order ID in the format "{year:4}{month:2}{day:2}{region_id:2}{random:8}"
     RETURN TO_NUMBER(
         TO_CHAR(p_now, 'YYYYMMDD') || 
         LPAD(p_region_id, 2, '0') || 
-        LPAD(p_random, 8, '0')
+        LPAD(MOD(p_random, 100000000), 8, '0')  -- set p_random to its last 8 digits (and pad if necessary)
     );
 EXCEPTION
     WHEN OTHERS THEN
