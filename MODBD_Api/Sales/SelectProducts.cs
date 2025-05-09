@@ -6,7 +6,7 @@ public static class SelectProducts
 {
     public static string FromTenant(Tenant tenant)
     {
-        string products = tenant == Tenant.Oltp ?
+        string products = tenant == Tenant.Global ?
             "vw_sls_products" :
             "sls_products";
 
