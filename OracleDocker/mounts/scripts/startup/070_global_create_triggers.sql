@@ -475,6 +475,88 @@ EXCEPTION WHEN OTHERS THEN
 END;
 /
 
+-- Create view for SLS_ORDERS
+CREATE OR REPLACE VIEW vw_sls_orders (
+  id, customer_id, customer_region_id, address, status_id, created_on, last_updated_on
+) AS
+SELECT id, customer_id, customer_region_id, address, status_id, created_on, last_updated_on
+  FROM SLS_ORDERS@eshop_romania_link
+UNION
+SELECT id, customer_id, customer_region_id, address, status_id, created_on, last_updated_on
+  FROM SLS_ORDERS@eshop_muntenia_link;
+
+CREATE OR REPLACE TRIGGER trg_sync_vw_sls_orders
+INSTEAD OF INSERT OR UPDATE OR DELETE ON vw_sls_orders
+FOR EACH ROW
+DECLARE
+  v_sql VARCHAR2(4000);
+BEGIN
+  IF INSERTING THEN
+    IF :NEW.customer_region_id <> 0 THEN
+      v_sql := q'[
+        INSERT INTO SLS_ORDERS@eshop_romania_link
+        (id, customer_id, customer_region_id, address, status_id, created_on)
+        VALUES (:1, :2, :3, :4, :5, SYSDATE)
+      ]';
+      EXECUTE IMMEDIATE v_sql
+        USING :NEW.id, :NEW.customer_id, :NEW.customer_region_id, :NEW.address, :NEW.status_id;
+    ELSE
+      v_sql := q'[
+        INSERT INTO SLS_ORDERS@eshop_muntenia_link
+        (id, customer_id, customer_region_id, address, status_id, created_on)
+        VALUES (:1, :2, :3, :4, :5, SYSDATE)
+      ]';
+      EXECUTE IMMEDIATE v_sql
+        USING :NEW.id, :NEW.customer_id, :NEW.customer_region_id, :NEW.address, :NEW.status_id;
+    END IF;
+
+  ELSIF UPDATING THEN
+    IF :NEW.customer_region_id <> 0 THEN
+      v_sql := q'[
+        UPDATE SLS_ORDERS@eshop_romania_link
+        SET customer_id = :1, customer_region_id = :2, address = :3, status_id = :4
+        WHERE id = :5
+      ]';
+      EXECUTE IMMEDIATE v_sql
+        USING :NEW.customer_id, :NEW.customer_region_id, :NEW.address, :NEW.status_id, :NEW.id;
+    ELSE
+      v_sql := q'[
+        UPDATE SLS_ORDERS@eshop_muntenia_link
+        SET customer_id = :1, customer_region_id = :2, address = :3, status_id = :4
+        WHERE id = :5
+      ]';
+      EXECUTE IMMEDIATE v_sql
+        USING :NEW.customer_id, :NEW.customer_region_id, :NEW.address, :NEW.status_id, :NEW.id;
+    END IF;
+
+  ELSE  -- DELETING
+    IF :OLD.customer_region_id <> 0 THEN
+      v_sql := q'[
+        DELETE FROM SLS_ORDERS@eshop_romania_link WHERE id = :1
+      ]';
+      EXECUTE IMMEDIATE v_sql USING :OLD.id;
+    ELSE
+      v_sql := q'[
+        DELETE FROM SLS_ORDERS@eshop_muntenia_link WHERE id = :1
+      ]';
+      EXECUTE IMMEDIATE v_sql USING :OLD.id;
+    END IF;
+  END IF;
+EXCEPTION
+  WHEN OTHERS THEN
+    LOG_ERROR(
+      'trg_sync_vw_sls_orders failed: action='
+      || CASE
+           WHEN INSERTING THEN 'INSERT'
+           WHEN UPDATING THEN 'UPDATE'
+           ELSE 'DELETE'
+         END
+      || ', err=' || SQLERRM
+    );
+    RAISE;  -- propagate so caller sees failure
+END;
+/
+
 -----------------------------------------------
 -------------- TESTING ------------------------
 -----------------------------------------------
@@ -583,6 +665,53 @@ BEGIN
     END IF;
 
     LOG_INFORMATION('Deletion verified in Muntenia.');
+END;
+/
+
+-- Test: Update a record in the view
+BEGIN
+    LOG_INFORMATION('Testing UPDATE on vw_sls_orders...');
+
+    -- Insert a test record into the view
+    INSERT INTO ESHOP_GLOBAL_USER.VW_SLS_ORDERS (id, customer_id, customer_region_id, address, status_id, created_on)
+    VALUES (1001, 2001, 1, 'Test Address Romania', 1, SYSDATE);
+
+    COMMIT;
+
+    -- Update the test record in the view
+    UPDATE ESHOP_GLOBAL_USER.VW_SLS_ORDERS
+    SET address = 'Updated Address Romania', status_id = 2
+    WHERE id = 1001;
+
+    COMMIT;
+
+    -- Verify: Check if the record was updated in Romania
+    DECLARE
+        v_count NUMBER;
+    BEGIN
+        LOG_INFORMATION('Verifying update in SLS_ORDERS@eshop_romania_link...');
+        SELECT COUNT(*) INTO v_count
+        FROM SLS_ORDERS@ESHOP_ROMANIA_LINK
+        WHERE id = 1001 AND address = 'Updated Address Romania' AND status_id = 2;
+
+        IF v_count != 1 THEN
+            RAISE_APPLICATION_ERROR(-20001,
+                'Expected 1 updated row in Romania, but found ' || v_count);
+        END IF;
+
+        LOG_INFORMATION('Update verification in Romania passed.');
+    END;
+
+    -- Cleanup: Delete the test record
+    DELETE FROM ESHOP_GLOBAL_USER.VW_SLS_ORDERS WHERE id = 1001;
+
+    COMMIT;
+    LOG_INFORMATION('Cleanup completed.');
+EXCEPTION
+    WHEN OTHERS THEN
+        LOG_ERROR('Error during UPDATE test: ' || SQLERRM);
+        ROLLBACK;
+        RAISE;
 END;
 /
 
