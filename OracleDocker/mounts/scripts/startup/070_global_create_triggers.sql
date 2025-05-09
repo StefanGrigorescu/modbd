@@ -737,69 +737,64 @@ LEFT JOIN (
     FROM IDNT_USERS@ESHOP_ROMANIA_LINK
 ) l ON g.id = l.id;
 
---Trigger that inserts / deletes data from local if changes are made to global.
---Due to vertical sharding, login related info is saved in global and profile related info
---is saved into global
-CREATE OR REPLACE TRIGGER trg_sync_vw_idnt_users
-INSTEAD OF INSERT OR DELETE ON vw_idnt_users
+-- Update trigger for IDNT_USERS
+CREATE OR REPLACE TRIGGER trg_update_vw_idnt_users
+INSTEAD OF UPDATE ON vw_idnt_users
 FOR EACH ROW
 DECLARE
-    v_region VARCHAR2(50); -- Use region name
-    v_generated_id NUMBER; -- Store the generated ID
+  v_region_id NUMBER;
+  v_sql VARCHAR2(4000);
 BEGIN
-    -- Determine the region
-    v_region := CASE
-        WHEN INSERTING THEN :NEW.region_id
-        ELSE :OLD.region_id
-    END;
+  UPDATE IDNT_USERS
+  SET email = :NEW.email,
+      password = :NEW.password,
+      salt = :NEW.salt
+  WHERE id = :NEW.id;
 
-    IF INSERTING THEN
-        INSERT INTO IDNT_USERS (
-            email, password, salt
-        ) VALUES (
-            :NEW.email, :NEW.password, :NEW.salt
-        ) RETURNING id INTO v_generated_id;
+  BEGIN
+    SELECT region_id
+    INTO v_region_id
+    FROM IDNT_USERS@ESHOP_MUNTENIA_LINK
+    WHERE id = :NEW.id;
 
-        IF v_region = 'MUNTENIA' THEN
-            INSERT INTO IDNT_USERS@ESHOP_MUNTENIA_LINK (
-                id, username, first_name, last_name, date_of_birth, phone_number, created_on, last_updated_on
-            ) VALUES (
-                v_generated_id, :NEW.username, :NEW.first_name, :NEW.last_name, :NEW.date_of_birth, :NEW.phone_number, SYSDATE, SYSDATE
-            );
-        ELSIF v_region = 'ROMANIA' THEN
-            INSERT INTO IDNT_USERS@ESHOP_ROMANIA_LINK (
-                id, username, first_name, last_name, date_of_birth, phone_number, created_on, last_updated_on
-            ) VALUES (
-                v_generated_id, :NEW.username, :NEW.first_name, :NEW.last_name, :NEW.date_of_birth, :NEW.phone_number, SYSDATE, SYSDATE
-            );
-        ELSE
-            RAISE_APPLICATION_ERROR(-20001, 'Invalid region. Cannot route data to local databases.');
-        END IF;
+    v_region_id := 0;
+  EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+      BEGIN
+        SELECT region_id
+        INTO v_region_id
+        FROM IDNT_USERS@ESHOP_ROMANIA_LINK
+        WHERE id = :NEW.id;
+      EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+          RAISE_APPLICATION_ERROR(-20001, 'Record not found in local tables for ID: ' || :NEW.id);
+      END;
+  END;
 
-    ELSE
-        DELETE FROM IDNT_USERS
-        WHERE id = :OLD.id;
+  IF v_region_id = 0 THEN
+    v_sql := q'[
+      UPDATE IDNT_USERS@ESHOP_MUNTENIA_LINK
+      SET username = :1, first_name = :2, last_name = :3, date_of_birth = :4, phone_number = :5
+      WHERE id = :6
+    ]';
+  ELSE
+    v_sql := q'[
+      UPDATE IDNT_USERS@ESHOP_ROMANIA_LINK
+      SET username = :1, first_name = :2, last_name = :3, date_of_birth = :4, phone_number = :5
+      WHERE id = :6
+    ]';
+  END IF;
 
-        IF v_region = 'MUNTENIA' THEN
-            DELETE FROM IDNT_USERS@ESHOP_MUNTENIA_LINK
-            WHERE id = :OLD.id;
-        ELSIF v_region = 'ROMANIA' THEN
-            DELETE FROM IDNT_USERS@ESHOP_ROMANIA_LINK
-            WHERE id = :OLD.id;
-        ELSE
-            RAISE_APPLICATION_ERROR(-20002, 'Invalid region. Cannot delete data from local databases.');
-        END IF;
-    END IF;
-EXCEPTION
-    WHEN OTHERS THEN
-        LOG_ERROR(
-            'trg_sync_vw_idnt_users failed: action='
-            || CASE
-                   WHEN INSERTING THEN 'INSERT'
-                   ELSE 'DELETE'
-               END
-            || ', err=' || SQLERRM
-        );
-        RAISE;
+  EXECUTE IMMEDIATE v_sql
+    USING :NEW.username, :NEW.first_name, :NEW.last_name, :NEW.date_of_birth, :NEW.phone_number, :NEW.id;
+END;
+/
+
+-- Delete trigger for IDNT_USERS
+CREATE OR REPLACE TRIGGER trg_delete_idnt_users
+BEFORE DELETE ON IDNT_USERS
+FOR EACH ROW
+BEGIN
+  RAISE_APPLICATION_ERROR(-20002, 'Deleting users is not allowed.');
 END;
 /
