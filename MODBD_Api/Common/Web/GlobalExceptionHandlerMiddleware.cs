@@ -138,10 +138,10 @@ public sealed class GlobalExceptionHandlerMiddleware : IMiddleware
         ApiProblemDetails problemDetails = new()
         {
             Status = (int)HttpStatusCode.InternalServerError,
-            Type = "Server error",
+            Type = ex.GetType().Name,
             Title = "Server error",
-            Detail = "We have encountered an internal server error",
-            ErrorMessages = ["We have encountered an internal server error"],
+            Detail = ex.Message,
+            ErrorMessages = [ex.Message],
             ErrorMetadata = MetadataCollection.Empty,
         };
 

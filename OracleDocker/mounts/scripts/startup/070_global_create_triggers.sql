@@ -514,7 +514,7 @@ BEGIN
     IF :NEW.customer_region_id <> 0 THEN
       v_sql := q'[
         UPDATE SLS_ORDERS@eshop_romania_link
-        SET customer_id = :1, customer_region_id = :2, address = :3, status_id = :4
+        SET customer_id = :1, customer_region_id = :2, address = :3, status_id = :4, last_updated_on = SYSDATE
         WHERE id = :5
       ]';
       EXECUTE IMMEDIATE v_sql
@@ -522,7 +522,7 @@ BEGIN
     ELSE
       v_sql := q'[
         UPDATE SLS_ORDERS@eshop_muntenia_link
-        SET customer_id = :1, customer_region_id = :2, address = :3, status_id = :4
+        SET customer_id = :1, customer_region_id = :2, address = :3, status_id = :4, last_updated_on = SYSDATE
         WHERE id = :5
       ]';
       EXECUTE IMMEDIATE v_sql
@@ -556,6 +556,158 @@ EXCEPTION
     RAISE;  -- propagate so caller sees failure
 END;
 /
+
+
+-- Create view for SLS_ORDER_ITEMS
+CREATE OR REPLACE VIEW vw_sls_order_items (
+  order_id, product_id, quantity, created_on, last_updated_on
+) AS
+SELECT order_id, product_id, quantity, created_on, last_updated_on
+  FROM SLS_ORDER_ITEMS@eshop_romania_link
+UNION
+SELECT order_id, product_id, quantity, created_on, last_updated_on
+  FROM SLS_ORDER_ITEMS@eshop_muntenia_link;
+
+-- Create trigger for vw_sls_order_items
+CREATE OR REPLACE TRIGGER trg_sync_vw_sls_order_items
+INSTEAD OF INSERT OR UPDATE OR DELETE ON vw_sls_order_items
+FOR EACH ROW
+DECLARE
+  v_sql VARCHAR2(4000);
+BEGIN
+  IF INSERTING THEN
+    v_sql := q'[
+      INSERT INTO SLS_ORDER_ITEMS@eshop_romania_link
+      (order_id, product_id, quantity, created_on)
+      VALUES (:1, :2, :3, SYSDATE)
+    ]';
+    EXECUTE IMMEDIATE v_sql
+      USING :NEW.order_id, :NEW.product_id, :NEW.quantity;
+    EXECUTE IMMEDIATE REPLACE(v_sql, 'eshop_romania_link', 'eshop_muntenia_link')
+      USING :NEW.order_id, :NEW.product_id, :NEW.quantity;
+
+  ELSIF UPDATING THEN
+    v_sql := q'[
+      UPDATE SLS_ORDER_ITEMS@eshop_romania_link
+      SET quantity = :1, last_updated_on = SYSDATE
+      WHERE order_id = :2 AND product_id = :3
+    ]';
+    EXECUTE IMMEDIATE v_sql
+      USING :NEW.quantity, :NEW.order_id, :NEW.product_id;
+    EXECUTE IMMEDIATE REPLACE(v_sql, 'eshop_romania_link', 'eshop_muntenia_link')
+      USING :NEW.quantity, :NEW.order_id, :NEW.product_id;
+
+  ELSE  -- DELETING
+    v_sql := q'[
+      DELETE FROM SLS_ORDER_ITEMS@eshop_romania_link
+      WHERE order_id = :1 AND product_id = :2
+    ]';
+    EXECUTE IMMEDIATE v_sql
+      USING :OLD.order_id, :OLD.product_id;
+    EXECUTE IMMEDIATE REPLACE(v_sql, 'eshop_romania_link', 'eshop_muntenia_link')
+      USING :OLD.order_id, :OLD.product_id;
+  END IF;
+EXCEPTION
+  WHEN OTHERS THEN
+    LOG_ERROR(
+      'trg_sync_vw_sls_order_items failed: action='
+      || CASE
+           WHEN INSERTING THEN 'INSERT'
+           WHEN UPDATING THEN 'UPDATE'
+           ELSE 'DELETE'
+         END
+      || ', err=' || SQLERRM
+    );
+    RAISE;  -- propagate so caller sees failure
+END;
+/
+
+
+CREATE OR REPLACE PROCEDURE PLACE_ORDER (
+    p_order_id IN NUMBER,
+    p_customer_id IN NUMBER,
+    p_address IN NVARCHAR2 DEFAULT 'Bucuresti Sector 2 Straga Pacii numarul 14 Bloc 34 Scara A',
+    p_items_csv IN NVARCHAR2,
+    is_success OUT NUMBER,
+    p_created_on IN TIMESTAMP DEFAULT SYSTIMESTAMP
+) IS
+    customer_region_id NUMBER;
+    final_address NVARCHAR2(850);
+    order_exists NUMBER := 0;
+BEGIN
+    -- Check if the order_id already exists
+    SELECT COUNT(*) INTO order_exists
+    FROM vw_sls_orders
+    WHERE id = p_order_id;
+
+    IF order_exists > 0 THEN
+        -- If order_id exists, set is_success to false (0)
+        is_success := 0;
+        LOG_DEBUG('Place_Order: Could not place order ' || p_order_id || ' for customer ID ' || p_customer_id || '. Order ID already exists.');
+    ELSE
+        -- Query the customer's region ID and address if not provided
+        BEGIN
+                SELECT region_id INTO customer_region_id
+                FROM vw_idnt_users
+                WHERE id = p_customer_id;
+                final_address := p_address;
+        EXCEPTION
+            WHEN NO_DATA_FOUND THEN
+                is_success := 0;
+                LOG_WARNING('Place_Order: No address found for customer ID ' || p_customer_id || '.');
+                RETURN;
+        END;
+
+        -- Insert the order into SLS_Orders
+        INSERT INTO vw_sls_orders (
+            id, customer_id, customer_region_id, address, status_id, created_on
+        ) VALUES (
+                                                                        -- Default status ID for "Pending"
+            p_order_id, p_customer_id, customer_region_id, final_address, 0, p_created_on
+        );
+
+        -- Process the items CSV
+        FOR item IN (
+            SELECT REGEXP_SUBSTR(p_items_csv, '[^,]+', 1, LEVEL) AS item
+            FROM DUAL
+            CONNECT BY REGEXP_SUBSTR(p_items_csv, '[^,]+', 1, LEVEL) IS NOT NULL
+        ) LOOP
+            DECLARE
+                product_id NUMBER;
+                quantity NUMBER;
+            BEGIN
+                -- Parse product_id and quantity from the item string
+                SELECT TO_NUMBER(REGEXP_SUBSTR(item.item, '^[^x]+')),
+                    TO_NUMBER(REGEXP_SUBSTR(item.item, '[^x]+$'))
+                INTO product_id, quantity
+                FROM DUAL;
+
+                -- Insert the item into SLS_Order_Items
+                INSERT INTO vw_sls_order_items (
+                    order_id, product_id, quantity
+                ) VALUES (
+                    p_order_id, product_id, quantity
+                );
+            EXCEPTION
+                WHEN OTHERS THEN
+                    LOG_ERROR('PLACE_ORDER: Error placing order ' || p_order_id || ' for customer ID ' || p_customer_id || '. Could not add item ' || item.item || ': ' || SQLERRM);
+            END;
+        END LOOP;
+        
+        COMMIT;
+
+        -- Set is_success to true (1)
+        is_success := 1;
+        LOG_INFORMATION('Place_Order: Order ' || p_order_id || ' placed successfully for customer ID ' || p_customer_id || '.');
+    END IF;
+EXCEPTION
+    WHEN OTHERS THEN
+        ROLLBACK;
+        is_success := 0;
+        LOG_ERROR('PLACE_ORDER: Error placing order ' || p_order_id || ' for customer ID ' || p_customer_id || ': ' || SQLERRM);
+END;
+/
+
 
 -----------------------------------------------
 -------------- TESTING ------------------------

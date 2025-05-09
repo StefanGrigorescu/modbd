@@ -1,148 +1,250 @@
 using Dapper;
 using Microsoft.AspNetCore.Mvc;
-using MODBD_Common.Abstractions;
-using MODBD_Common.Abstractions.Responses;
+using MODBD_Api.Common;
 using MODBD_Api.Common.Contracts;
 using MODBD_Api.Common.Persistence;
+using MODBD_Common.Abstractions;
+using MODBD_Common.Abstractions.Responses;
 using System.Data;
-using MODBD_Api.Common;
 
-namespace MODBD_Api.Sales.AppQueries
+namespace MODBD_Api.Sales.AppQueries;
+
+// ======= Response DTO =======
+public sealed record GetOrderResponse
 {
-    // ======= Response DTO =======
-    public sealed record GetOrderResponse
+    public required decimal Id            { get; init; }
+    public required int      CustomerId    { get; init; }
+    public required DateTime OrderDate     { get; init; }
+    public required decimal  TotalAmount   { get; init; }
+    public required string   Status        { get; init; }
+    public required DateTime CreatedOn     { get; init; }
+    public required DateTime LastUpdatedOn { get; init; }
+}
+public sealed record PlaceOrderRequest
+{
+    public required int CustomerId { get; init; }
+    public required string Address { get; init; }
+    public required string ItemsCsv { get; init; }
+}
+
+// ======= Queries =======
+public sealed record GetOrdersQuery : IRequest<IEnumerable<GetOrderResponse>>
+{
+    public required int TenantId { get; init; }
+}
+public sealed record GetOrderQuery(int Id) : IRequest<GetOrderResponse>
+{
+    public required int TenantId { get; init; }
+}
+public sealed record GetMyOrdersQuery(int CustomerId) : IRequest<IEnumerable<GetOrderResponse>>
+{
+    public required int TenantId { get; init; }
+}
+public sealed record PlaceOrderCommand(PlaceOrderRequest Request, int TenantId) : IRequest<bool>;
+
+// ======= Controllers =======
+[ApiController]
+public sealed class GetOrdersController : ControllerBase
+{
+    private readonly GetOrdersQueryHandler _handler;
+
+    public GetOrdersController(GetOrdersQueryHandler handler)
     {
-        public required int      Id            { get; init; }
-        public required int      CustomerId    { get; init; }
-        public required DateTime OrderDate     { get; init; }
-        public required decimal  TotalAmount   { get; init; }
-        public required string   Status        { get; init; }
-        public required DateTime CreatedOn     { get; init; }
-        public required DateTime LastUpdatedOn { get; init; }
+        _handler = handler;
     }
 
-    // ======= Queries =======
-    public sealed record GetOrdersQuery : IRequest<IEnumerable<GetOrderResponse>>;
-    public sealed record GetOrderQuery(int Id) : IRequest<GetOrderResponse>;
-    public sealed record GetMyOrdersQuery(int CustomerId) : IRequest<IEnumerable<GetOrderResponse>>;
-
-    // ======= Controllers =======
-    [ApiController]
-    public sealed class GetOrdersController : ControllerBase
+    [HttpGet(ApiRoutes.Sales.GetOrders, Name = "get-orders")]
+    [Tags(ApiRoutes.Sales.Tag)]
+    public async Task<IActionResult> GetOrders([FromRoute] int tenantId, CancellationToken cancellationToken = default)
     {
-        private readonly GetOrdersQueryHandler _handler;
+        GetOrdersQuery query = new() { TenantId = tenantId };
+        AppResponse<IEnumerable<GetOrderResponse>> response = await _handler.Handle(query, cancellationToken);
+        return this.From(response);
+    }
+}
 
-        public GetOrdersController(GetOrdersQueryHandler handler)
-        {
-            _handler = handler;
-        }
+public sealed class GetOrderController : ControllerBase
+{
+    private readonly GetOrderQueryHandler _handler;
 
-        [HttpGet(ApiRoutes.Sales.GetOrders, Name = "get-orders")]
-        [Tags(ApiRoutes.Sales.Tag)]
-        public async Task<IActionResult> GetOrders(CancellationToken cancellationToken = default)
-        {
-            var query = new GetOrdersQuery();
-            var response = await _handler.Handle(query, cancellationToken);
-            return this.From(response);
-        }
+    public GetOrderController(GetOrderQueryHandler handler)
+    {
+        _handler = handler;
     }
 
-    public sealed class GetOrderController : ControllerBase
+    [HttpGet(ApiRoutes.Sales.GetOrder, Name = "get-order")]
+    [Tags(ApiRoutes.Sales.Tag)]
+    public async Task<IActionResult> GetOrder([FromRoute] int tenantId, [FromRoute] int id, CancellationToken cancellationToken = default)
     {
-        private readonly GetOrderQueryHandler _handler;
+        GetOrderQuery query = new(id) { TenantId = tenantId };
+        AppResponse<GetOrderResponse> response = await _handler.Handle(query, cancellationToken);
+        return this.From(response);
+    }
+}
 
-        public GetOrderController(GetOrderQueryHandler handler)
-        {
-            _handler = handler;
-        }
+public sealed class GetMyOrdersController : ControllerBase
+{
+    private readonly GetMyOrdersQueryHandler _handler;
 
-        [HttpGet(ApiRoutes.Sales.GetOrder, Name = "get-order")]
-        [Tags(ApiRoutes.Sales.Tag)]
-        public async Task<IActionResult> GetOrder([FromRoute] int id, CancellationToken cancellationToken = default)
-        {
-            var query = new GetOrderQuery(id);
-            var response = await _handler.Handle(query, cancellationToken);
-            return this.From(response);
-        }
+    public GetMyOrdersController(GetMyOrdersQueryHandler handler)
+    {
+        _handler = handler;
     }
 
-    public sealed class GetMyOrdersController : ControllerBase
+    [HttpGet(ApiRoutes.Sales.GetMyOrders, Name = "get-my-orders")]
+    [Tags(ApiRoutes.Sales.Tag)]
+    public async Task<IActionResult> GetMyOrders([FromRoute] int tenantId, [FromRoute] int customerId, CancellationToken cancellationToken = default)
     {
-        private readonly GetMyOrdersQueryHandler _handler;
+        GetMyOrdersQuery query = new(customerId) { TenantId = tenantId };
+        AppResponse<IEnumerable<GetOrderResponse>> response = await _handler.Handle(query, cancellationToken);
+        return this.From(response);
+    }
+}
 
-        public GetMyOrdersController(GetMyOrdersQueryHandler handler)
-        {
-            _handler = handler;
-        }
+[ApiController]
+public sealed class PlaceOrderController : ControllerBase
+{
+    private readonly PlaceOrderCommandHandler _handler;
 
-        [HttpGet(ApiRoutes.Sales.GetMyOrders, Name = "get-my-orders")]
-        [Tags(ApiRoutes.Sales.Tag)]
-        public async Task<IActionResult> GetMyOrders([FromRoute] int customerId, CancellationToken cancellationToken = default)
-        {
-            var query = new GetMyOrdersQuery(customerId);
-            var response = await _handler.Handle(query, cancellationToken);
-            return this.From(response);
-        }
+    public PlaceOrderController(PlaceOrderCommandHandler handler)
+    {
+        _handler = handler;
     }
 
-    // ======= Handlers =======
-    public sealed class GetOrdersQueryHandler : IRequestHandler<GetOrdersQuery, IEnumerable<GetOrderResponse>>
+    [HttpPost(ApiRoutes.Sales.PlaceOrder, Name = "place-order")]
+    [Tags(ApiRoutes.Sales.Tag)]
+    public async Task<IActionResult> PlaceOrder([FromRoute] int tenantId, [FromBody] PlaceOrderRequest request, CancellationToken cancellationToken = default)
     {
-        private readonly GetDbConnection _getDbConnection;
-
-        public GetOrdersQueryHandler(GetDbConnection getDbConnection) => _getDbConnection = getDbConnection;
-
-        public async ValueTask<AppResponse<IEnumerable<GetOrderResponse>>> Handle(GetOrdersQuery request, CancellationToken cancellationToken)
-        {
-            using IDbConnection db = _getDbConnection(Tenant.Global);
-            const string sql = @"
-                SELECT * FROM VW_SLS_ORDERS";
-            var orders = await db.QueryAsync<GetOrderResponse>(sql);
-            return AppResponse<IEnumerable<GetOrderResponse>>.Succeeded(orders);
-        }
+        PlaceOrderCommand command = new(request, tenantId);
+        AppResponse<bool> response = await _handler.Handle(command, cancellationToken);
+        return response.IsSuccess
+            ? Ok("Order placed successfully.")
+            : BadRequest(response.ErrorMessages);
     }
+}
 
-    public sealed class GetOrderQueryHandler : IRequestHandler<GetOrderQuery, GetOrderResponse>
+// ======= Handlers =======
+public sealed class GetOrdersQueryHandler : IRequestHandler<GetOrdersQuery, IEnumerable<GetOrderResponse>>
+{
+    private readonly GetDbConnection _getDbConnection;
+
+    public GetOrdersQueryHandler(GetDbConnection getDbConnection) => _getDbConnection = getDbConnection;
+
+    public async ValueTask<AppResponse<IEnumerable<GetOrderResponse>>> Handle(GetOrdersQuery request, CancellationToken cancellationToken)
     {
-        private readonly GetDbConnection _getDbConnection;
+        Tenant tenant = Tenant.FromId(request.TenantId);
+        using IDbConnection db = _getDbConnection(tenant);
+        string sql = @$"
+                SELECT * FROM {OrdersByTenant.Get(tenant)}";
+        IEnumerable<GetOrderResponse> orders = await db.QueryAsync<GetOrderResponse>(sql);
+        return AppResponse<IEnumerable<GetOrderResponse>>.Succeeded(orders);
+    }
+}
 
-        public GetOrderQueryHandler(GetDbConnection getDbConnection) => _getDbConnection = getDbConnection;
+public sealed class GetOrderQueryHandler : IRequestHandler<GetOrderQuery, GetOrderResponse>
+{
+    private readonly GetDbConnection _getDbConnection;
 
-        public async ValueTask<AppResponse<GetOrderResponse>> Handle(GetOrderQuery request, CancellationToken cancellationToken)
-        {
-            using IDbConnection db = _getDbConnection(Tenant.Global);
-            const string sql = @"
-                SELECT * FROM VW_SLS_ORDERS
+    public GetOrderQueryHandler(GetDbConnection getDbConnection) => _getDbConnection = getDbConnection;
+
+    public async ValueTask<AppResponse<GetOrderResponse>> Handle(GetOrderQuery request, CancellationToken cancellationToken)
+    {
+        Tenant tenant = Tenant.FromId(request.TenantId);
+        using IDbConnection db = _getDbConnection(tenant);
+        string sql = @$"
+                SELECT * FROM {OrdersByTenant.Get(tenant)}
                 WHERE id = :id";
 
-            var parameters = new DynamicParameters();
-            parameters.Add(":id", request.Id);
+        DynamicParameters parameters = new();
+        parameters.Add(":id", request.Id);
 
-            var order = await db.QueryFirstOrDefaultAsync<GetOrderResponse>(sql, parameters);
-            return order is null
-                ? AppResponse<GetOrderResponse>.Failed($"Order with ID {request.Id} not found.")
-                : AppResponse<GetOrderResponse>.Succeeded(order);
-        }
+        GetOrderResponse? order = await db.QueryFirstOrDefaultAsync<GetOrderResponse>(sql, parameters);
+        return order is null
+            ? AppResponse<GetOrderResponse>.Failed($"Order with ID {request.Id} not found.")
+            : AppResponse<GetOrderResponse>.Succeeded(order);
     }
+}
 
-    public sealed class GetMyOrdersQueryHandler : IRequestHandler<GetMyOrdersQuery, IEnumerable<GetOrderResponse>>
+public sealed class GetMyOrdersQueryHandler : IRequestHandler<GetMyOrdersQuery, IEnumerable<GetOrderResponse>>
+{
+    private readonly GetDbConnection _getDbConnection;
+
+    public GetMyOrdersQueryHandler(GetDbConnection getDbConnection) => _getDbConnection = getDbConnection;
+
+    public async ValueTask<AppResponse<IEnumerable<GetOrderResponse>>> Handle(GetMyOrdersQuery request, CancellationToken cancellationToken)
     {
-        private readonly GetDbConnection _getDbConnection;
-
-        public GetMyOrdersQueryHandler(GetDbConnection getDbConnection) => _getDbConnection = getDbConnection;
-
-        public async ValueTask<AppResponse<IEnumerable<GetOrderResponse>>> Handle(GetMyOrdersQuery request, CancellationToken cancellationToken)
-        {
-            using IDbConnection db = _getDbConnection(Tenant.Global);
-            const string sql = @"
-                SELECT * FROM VW_SLS_ORDERS
+        Tenant tenant = Tenant.FromId(request.TenantId);
+        using IDbConnection db = _getDbConnection(tenant);
+        string sql = @$"
+                SELECT * FROM {OrdersByTenant.Get(tenant)}
                 WHERE customer_id = :customerId";
 
-            var parameters = new DynamicParameters();
-            parameters.Add(":customerId", request.CustomerId);
+        DynamicParameters parameters = new();
+        parameters.Add(":customerId", request.CustomerId);
 
-            var orders = await db.QueryAsync<GetOrderResponse>(sql, parameters);
-            return AppResponse<IEnumerable<GetOrderResponse>>.Succeeded(orders);
+        IEnumerable<GetOrderResponse> orders = await db.QueryAsync<GetOrderResponse>(sql, parameters);
+        return AppResponse<IEnumerable<GetOrderResponse>>.Succeeded(orders);
+    }
+}
+
+public sealed class PlaceOrderCommandHandler : IRequestHandler<PlaceOrderCommand, bool>
+{
+    private readonly GetDbConnection _getDbConnection;
+
+    public PlaceOrderCommandHandler(GetDbConnection getDbConnection)
+    {
+        _getDbConnection = getDbConnection;
+    }
+
+    public async ValueTask<AppResponse<bool>> Handle(PlaceOrderCommand request, CancellationToken cancellationToken)
+    {
+        Tenant tenant = Tenant.FromId(request.TenantId);
+        using IDbConnection db = _getDbConnection(tenant);
+
+        const string procedureName = "PLACE_ORDER";
+
+        decimal orderId = GenerateRandomOrderId(request.TenantId);
+
+        DynamicParameters parameters = new();
+        parameters.Add("p_order_id", orderId, DbType.Int64, ParameterDirection.Input);
+        parameters.Add("p_customer_id", request.Request.CustomerId, DbType.Int32, ParameterDirection.Input);
+        parameters.Add("p_address", request.Request.Address, DbType.String, ParameterDirection.Input);
+        parameters.Add("p_items_csv", request.Request.ItemsCsv, DbType.String, ParameterDirection.Input);
+        parameters.Add("is_success", dbType: DbType.Int32, direction: ParameterDirection.Output);
+        parameters.Add("p_created_on", DateTime.UtcNow, DbType.DateTime, ParameterDirection.Input);
+
+        await db.ExecuteAsync(procedureName, parameters, commandType: CommandType.StoredProcedure);
+
+        int isSuccess = parameters.Get<int>("is_success");
+        return isSuccess == 1
+            ? AppResponse<bool>.Succeeded(true)
+            : AppResponse<bool>.Failed("Failed to place the order.");
+    }
+
+    private static decimal GenerateRandomOrderId(int tenantId)
+    {
+        string datePart = DateTime.UtcNow.ToString("yyyyMMdd");
+
+        int regionId = tenantId;
+        string regionPart = regionId.ToString("D2"); 
+
+        Random random = new();
+        string randomPart = string.Concat(Enumerable.Range(0, 12).Select(_ => random.Next(0, 10)));
+
+        string orderIdString = $"{datePart}{regionPart}{randomPart}";
+
+        return decimal.Parse(orderIdString);
+    }
+}
+
+public static class OrdersByTenant
+{
+    public static string Get(Tenant tenant)
+    {
+        if(tenant == Tenant.Oltp)
+        {
+            return "vw_sls_orders";
         }
+        return "sls_orders";
     }
 }

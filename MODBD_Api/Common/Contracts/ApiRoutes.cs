@@ -38,9 +38,10 @@ public static class ApiRoutes
 
         public const string Tag = "Sales";
 
-        public const string GetOrders = _salesRoute + "/orders";
-        public const string GetOrder = _salesRoute + "/orders/{id}";
-        public const string GetMyOrders = _salesRoute + "{customerId}/my-orders";
+        public const string GetOrders = _salesRoute + "/{tenantId}/orders";
+        public const string GetOrder = _salesRoute + "/{tenantId}/orders/{id}";
+        public const string GetMyOrders = _salesRoute + "/{tenantId}/{customerId}/my-orders";
+        public const string PlaceOrder = _salesRoute + "/{tenantId}/orders";
     }
 
     public static class Billing
