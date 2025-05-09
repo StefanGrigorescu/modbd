@@ -121,6 +121,35 @@ EXCEPTION
 END;
 /
 
+CREATE OR REPLACE PROCEDURE INSERT_USER_ROLE (
+    p_user_id IN NUMBER,
+    p_role_name IN VARCHAR2
+) IS
+    role_id NUMBER;
+BEGIN
+    -- Check if the role exists
+    BEGIN
+        SELECT id INTO role_id
+        FROM IDNT_ROLES
+        WHERE UPPER(name) = UPPER(p_role_name);
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            role_id := NULL;
+            LOG_ERROR('INSERT_USER_ROLE: Role ' || p_role_name || ' does not exist. No role assigned to user ID ' || p_user_id || '.');
+            RETURN;
+    END;
+
+    INSERT INTO IDNT_USER_ROLES (user_id, role_id, created_on) 
+    VALUES (p_user_id, role_id, SYSDATE);
+    
+    LOG_INFORMATION('INSERT_USER_ROLE: Role ' || p_role_name || ' assigned to user ID ' || p_user_id);
+    COMMIT;
+EXCEPTION
+    WHEN OTHERS THEN
+        LOG_ERROR('INSERT_USER_ROLE: Error assigning role ' || p_role_name || ' to user ID ' || p_user_id || ': ' || SQLERRM);
+END;
+/
+
 -- Modified INSERT_USER procedure for fragmented IDNT_USERS table
 CREATE OR REPLACE PROCEDURE INSERT_USER (
     p_username IN NVARCHAR2,
@@ -184,6 +213,7 @@ BEGIN
             id, email, password, salt
         ) VALUES (
             user_id, p_email, p_password, p_salt
+            
         ) RETURNING id INTO user_id;
 
         -- Log success for global insertion
@@ -191,15 +221,15 @@ BEGIN
 
         IF region_id = 0 THEN
             INSERT INTO IDNT_USERS@ESHOP_MUNTENIA_LINK (
-                id, username, first_name, last_name, date_of_birth, phone_number
+                id, username, first_name, last_name, date_of_birth, phone_number, created_on, last_updated_on, region_id
             ) VALUES (
-                user_id, p_username, p_first_name, p_last_name, p_date_of_birth, p_phone_number
+                user_id, p_username, p_first_name, p_last_name, p_date_of_birth, p_phone_number, p_now, NULL, region_id
             );
         ELSE
             INSERT INTO IDNT_USERS@ESHOP_ROMANIA_LINK (
-                id, username, first_name, last_name, date_of_birth, phone_number
+                id, username, first_name, last_name, date_of_birth, phone_number, created_on, last_updated_on, region_id
             ) VALUES (
-                user_id, p_username, p_first_name, p_last_name, p_date_of_birth, p_phone_number
+                user_id, p_username, p_first_name, p_last_name, p_date_of_birth, p_phone_number, p_now, NULL, region_id
             );
         END IF;
 
@@ -227,35 +257,6 @@ EXCEPTION
         LOG_ERROR('INSERT_USER: Error creating user ' || p_email || ': ' || SQLERRM);
         ROLLBACK;
         p_user_created := -1; -- Error occurred
-END;
-/
-
-CREATE OR REPLACE PROCEDURE INSERT_USER_ROLE (
-    p_user_id IN NUMBER,
-    p_role_name IN VARCHAR2
-) IS
-    role_id NUMBER;
-BEGIN
-    -- Check if the role exists
-    BEGIN
-        SELECT id INTO role_id
-        FROM IDNT_ROLES
-        WHERE UPPER(name) = UPPER(p_role_name);
-    EXCEPTION
-        WHEN NO_DATA_FOUND THEN
-            role_id := NULL;
-            LOG_ERROR('INSERT_USER_ROLE: Role ' || p_role_name || ' does not exist. No role assigned to user ID ' || p_user_id || '.');
-            RETURN;
-    END;
-
-    INSERT INTO IDNT_USER_ROLES (user_id, role_id) 
-    VALUES (p_user_id, role_id);
-    
-    LOG_INFORMATION('INSERT_USER_ROLE: Role ' || p_role_name || ' assigned to user ID ' || p_user_id);
-    COMMIT;
-EXCEPTION
-    WHEN OTHERS THEN
-        LOG_ERROR('INSERT_USER_ROLE: Error assigning role ' || p_role_name || ' to user ID ' || p_user_id || ': ' || SQLERRM);
 END;
 /
 
