@@ -22,8 +22,6 @@
     <Folder Include="Identity\AppCommands\" />
     <Folder Include="Purchases\AppCommands\" />
     <Folder Include="Purchases\AppQueries\" />
-    <Folder Include="Sales\AppCommands\" />
-    <Folder Include="Sales\AppQueries\" />
   </ItemGroup>
 
   <ItemGroup>
