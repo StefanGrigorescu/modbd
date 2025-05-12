@@ -111,17 +111,20 @@ public sealed class PlaceOrderCommandHandler : IRequestHandler<PlaceOrderCommand
             .WithParameter("p_address", request.Address, DbType.String, ParameterDirection.Input)
             .WithParameter("p_items_csv", request.ItemsCsv, DbType.String, ParameterDirection.Input)
             .WithParameter("is_success", dbType: DbType.Int32, direction: ParameterDirection.Output)
-            .WithParameter("p_created_on", DateTime.UtcNow, DbType.DateTime, ParameterDirection.Input);
+            .WithParameter("p_created_on", DateTime.UtcNow, DbType.DateTime, ParameterDirection.Input)
+            .WithParameter("error_message", dbType: DbType.String, direction: ParameterDirection.Output);
 
         await db.ExecuteAsync(procedureName, parameters, commandType: CommandType.StoredProcedure);
 
         int isSuccess = parameters.Get<int>("is_success");
+        string errorMessage = parameters.Get<string>("error_message");
+
         return isSuccess == 1 ?
             AppResponse<PlaceOrderResponse>.Succeeded(new()
             {
                 OrderId = orderId,
                 CreatedOn = _utcSnapshot.AsDateTime(),
             }) :
-            AppResponse<PlaceOrderResponse>.Failed("Failed to place the order.");
+            AppResponse<PlaceOrderResponse>.Failed(errorMessage);
     }
 }

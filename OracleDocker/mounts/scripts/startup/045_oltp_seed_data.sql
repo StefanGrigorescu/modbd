@@ -1652,6 +1652,7 @@ CREATE OR REPLACE PROCEDURE PLACE_ORDER (
     p_address IN NVARCHAR2 DEFAULT NULL,
     p_items_csv IN NVARCHAR2,
     is_success OUT NUMBER,
+    error_message OUT NVARCHAR2,
     p_created_on IN TIMESTAMP DEFAULT SYSTIMESTAMP
 ) IS
     customer_region_id NUMBER;
@@ -1666,6 +1667,7 @@ BEGIN
     IF order_exists > 0 THEN
         -- If order_id exists, set is_success to false (0)
         is_success := 0;
+        error_message := 'Could not place order ' || p_order_id || ' for customer ID ' || p_customer_id || '. Order ID already exists.';
         LOG_DEBUG('Place_Order: Could not place order ' || p_order_id || ' for customer ID ' || p_customer_id || '. Order ID already exists.');
     ELSE
         -- Query the customer's region ID and address if not provided
@@ -1688,6 +1690,7 @@ BEGIN
         EXCEPTION
             WHEN NO_DATA_FOUND THEN
                 is_success := 0;
+                error_message := 'No address found for customer ID ' || p_customer_id || '.';
                 LOG_WARNING('Place_Order: No address found for customer ID ' || p_customer_id || '.');
                 RETURN;
         END;
@@ -1723,8 +1726,12 @@ BEGIN
                     p_order_id, product_id, quantity
                 );
             EXCEPTION
-                WHEN OTHERS THEN
+                WHEN OTHERS THEN       
+                    ROLLBACK;
+                    is_success := 0;
+                    error_message := 'Error placing order ' || p_order_id || ' for customer ID ' || p_customer_id || '. Could not add item ' || item.item || ': ' || SQLERRM;
                     LOG_ERROR('PLACE_ORDER: Error placing order ' || p_order_id || ' for customer ID ' || p_customer_id || '. Could not add item ' || item.item || ': ' || SQLERRM);
+                    RETURN;
             END;
         END LOOP;
         
@@ -1738,6 +1745,7 @@ EXCEPTION
     WHEN OTHERS THEN
         ROLLBACK;
         is_success := 0;
+        error_message := 'Error placing order ' || p_order_id || ' for customer ID ' || p_customer_id || ': ' || SQLERRM;
         LOG_ERROR('PLACE_ORDER: Error placing order ' || p_order_id || ' for customer ID ' || p_customer_id || ': ' || SQLERRM);
 END;
 /
@@ -1749,7 +1757,8 @@ CREATE OR REPLACE PROCEDURE Seed_Order (
     p_order_id OUT NUMBER,
     p_address IN NVARCHAR2 DEFAULT NULL,
     p_items_csv IN NVARCHAR2,
-    is_success OUT NUMBER
+    is_success OUT NUMBER,
+    error_message OUT NVARCHAR2
 ) IS
     v_customer_id NUMBER;
     v_customer_region_id NUMBER;
@@ -1785,7 +1794,8 @@ BEGIN
         p_address => p_address,
         p_items_csv => p_items_csv,
         is_success => is_success,
-        p_created_on => p_now
+        p_created_on => p_now,
+        error_message => error_message
     );
 
     IF is_success = 1 THEN
@@ -1803,6 +1813,7 @@ END;
 DECLARE
     p_order_id NUMBER;
     is_success NUMBER;
+    error_message NVARCHAR2(850);
     p_now TIMESTAMP;
     p_random NUMBER := 0;
     p_customer_id_offset NUMBER;
@@ -1851,7 +1862,8 @@ BEGIN
             p_order_id => p_order_id,
             p_address => p_address,
             p_items_csv => p_items_csv,
-            is_success => is_success
+            is_success => is_success,
+            error_message => error_message
         );
 
         -- Increment the random seed for the next order

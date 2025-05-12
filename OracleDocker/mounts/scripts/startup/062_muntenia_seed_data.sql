@@ -10,6 +10,7 @@ CREATE OR REPLACE PROCEDURE PLACE_ORDER (
     p_address IN NVARCHAR2 DEFAULT 'Bucuresti Sector 2 Straga Pacii numarul 14 Bloc 34 Scara A',
     p_items_csv IN NVARCHAR2,
     is_success OUT NUMBER,
+    error_message OUT NVARCHAR2,
     p_created_on IN TIMESTAMP DEFAULT SYSTIMESTAMP
 ) IS
     customer_region_id NUMBER;
@@ -24,6 +25,7 @@ BEGIN
     IF order_exists > 0 THEN
         -- If order_id exists, set is_success to false (0)
         is_success := 0;
+        error_message := 'Could not place order ' || p_order_id || ' for customer ID ' || p_customer_id || '. Order ID already exists.';
         LOG_DEBUG('Place_Order: Could not place order ' || p_order_id || ' for customer ID ' || p_customer_id || '. Order ID already exists.');
     ELSE
         -- Query the customer's region ID and address if not provided
@@ -35,6 +37,7 @@ BEGIN
         EXCEPTION
             WHEN NO_DATA_FOUND THEN
                 is_success := 0;
+                error_message := 'No address found for customer ID ' || p_customer_id || '.';
                 LOG_WARNING('Place_Order: No address found for customer ID ' || p_customer_id || '.');
                 RETURN;
         END;
@@ -71,7 +74,11 @@ BEGIN
                 );
             EXCEPTION
                 WHEN OTHERS THEN
+                    ROLLBACK;
+                    is_success := 0;
+                    error_message := 'Error placing order ' || p_order_id || ' for customer ID ' || p_customer_id || '. Could not add item ' || item.item || ': ' || SQLERRM;
                     LOG_ERROR('PLACE_ORDER: Error placing order ' || p_order_id || ' for customer ID ' || p_customer_id || '. Could not add item ' || item.item || ': ' || SQLERRM);
+                    RETURN;
             END;
         END LOOP;
         
@@ -85,6 +92,7 @@ EXCEPTION
     WHEN OTHERS THEN
         ROLLBACK;
         is_success := 0;
+        error_message := 'Error placing order ' || p_order_id || ' for customer ID ' || p_customer_id || ': ' || SQLERRM;
         LOG_ERROR('PLACE_ORDER: Error placing order ' || p_order_id || ' for customer ID ' || p_customer_id || ': ' || SQLERRM);
 END;
 /
