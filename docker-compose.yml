@@ -1,45 +1,48 @@
 services:
-  oracle-db:
-    image: container-registry.oracle.com/database/enterprise:21.3.0.0
-    container_name: EShopOra
-    ports:
-      - "1515:1521" # Oracle Listener
-      - "1516:5500" # OEM Express
-    environment:
-      ORACLE_SID: "ORCLCDB" # Default: ORCLCDB
-      ORACLE_PDB: "ORCLPDB1" # Default: ORCLPDB1
-      ORACLE_PWD: "MySecurePassword123!"
-      INIT_SGA_SIZE: "2048" # 2 GB for SGA
-      INIT_PGA_SIZE: "1024" # 1 GB for PGA
-      ORACLE_EDITION: "enterprise" # Options: enterprise/standard
-      ORACLE_CHARACTERSET: "AL32UTF8" # Default: AL32UTF8
-      ENABLE_ARCHIVELOG: "true" # Enable archive log mode
-    volumes:
-      - ${PROJECT_PATH}/OracleDocker/mounts/oradata:/opt/oracle/oradata # Persistent data storage
-      - ${PROJECT_PATH}/OracleDocker/mounts/scripts/startup:/opt/oracle/scripts/startup # Consolidated startup scripts
-    shm_size: "1g" # Shared memory allocation for the container
-    healthcheck:
-      test: [ "CMD", "ls", "/opt/oracle/oradata" ]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-    networks:
-      - modbd_network
+    oracle-db:
+        image: container-registry.oracle.com/database/enterprise:21.3.0.0
+        container_name: EShopOra
+        ports:
+            - "1515:1521" # Oracle Listener
+            - "1516:5500" # OEM Express
+        environment:
+            ORACLE_SID: "ORCLCDB" # Default: ORCLCDB
+            ORACLE_PDB: "ORCLPDB1" # Default: ORCLPDB1
+            ORACLE_PWD: "MySecurePassword123!"
+            INIT_SGA_SIZE: "2048" # 2 GB for SGA
+            INIT_PGA_SIZE: "1024" # 1 GB for PGA
+            ORACLE_EDITION: "enterprise" # Options: enterprise/standard
+            ORACLE_CHARACTERSET: "AL32UTF8" # Default: AL32UTF8
+            ENABLE_ARCHIVELOG: "true" # Enable archive log mode
+        volumes:
+            - ${PROJECT_PATH}/OracleDocker/mounts/oradata:/opt/oracle/oradata # Persistent data storage
+            - ${PROJECT_PATH}/OracleDocker/mounts/scripts/startup:/opt/oracle/scripts/startup # Consolidated startup scripts
+        shm_size: "1g" # Shared memory allocation for the container
+        healthcheck:
+            test: [ "CMD", "ls", "/opt/oracle/oradata" ]
+            interval: 30s
+            timeout: 10s
+            retries: 5
+        networks:
+            - modbd_network
 
-  modbd-api:
-    build:
-      context: .
-      dockerfile: ./MODBD_Api/Dockerfile
-    container_name: EShopApi
-    ports:
-      - "8080:8080" # Expose the API on port 8080
-    environment:
-      ASPNETCORE_ENVIRONMENT: Development
-    depends_on:
-      - oracle-db
-    networks:
-      - modbd_network
+    modbd-api:
+        build:
+            context: .
+            dockerfile: ./MODBD_Api/Dockerfile
+        container_name: EShopApi
+        ports:
+            - "8080:8080" # Expose the API on port 8080
+        environment:
+            ASPNETCORE_ENVIRONMENT: Development
+        depends_on:
+            - oracle-db
+        volumes:
+            - .:/src # Mount the current directory to /src in the container
+        command: dotnet watch run --no-launch-profile --urls http://0.0.0.0:8080 # Enable hot reload
+        networks:
+            - modbd_network
 
 networks:
-  modbd_network:
-    driver: bridge
+    modbd_network:
+        driver: bridge
