@@ -13,6 +13,7 @@ COPY ["MODBD_Api.sln", "./"]
 COPY ["MODBD_Common/MODBD_Common.csproj", "MODBD_Common/"]
 COPY ["MODBD_Core/MODBD_Core.csproj", "MODBD_Core/"]
 COPY ["MODBD_Api/MODBD_Api.csproj", "MODBD_Api/"]
+COPY ["MODBD_Analiza/MODBD_Analiza.csproj", "MODBD_Analiza/"]
 RUN dotnet restore "./MODBD_Api.sln"
 
 # Copy all project files and build the solution

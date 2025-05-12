@@ -55,7 +55,7 @@ public sealed record SelectOrdersWithItemsSpecification
             LEFT JOIN {OrderItems} oi 
                 ON o.id = oi.order_id
             LEFT JOIN {Products} p 
-                ON oi.product_id = p.id
+                ON oi.product_id = p.id 
 
             {whereCondition}
         ";
