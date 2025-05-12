@@ -4,6 +4,16 @@ public static class ApiRoutes
 {
     private const string _root = "api";
 
+    public static class Insights 
+    {
+        private const string _insightsRoute = _root + "/insights";
+
+        public const string Tag = "Insights";
+
+        public const string GetDynamic = _insightsRoute + "/dynamic";
+    }
+
+    
     public static class Identity
     {
         private const string _identityRoute = _root + "/identity";

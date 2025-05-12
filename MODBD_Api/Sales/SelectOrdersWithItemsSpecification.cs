@@ -23,44 +23,6 @@ public sealed record SelectOrdersWithItemsSpecification
         "vw_sls_order_statuses" :
         "sls_order_statuses";
 
-    private string AsQuery()
-    {
-        string whereCondition = string.IsNullOrWhiteSpace(_where) ? 
-            string.Empty : 
-            $"WHERE {_where}";
-
-        return $@"
-            SELECT 
-                o.id, 
-                o.customer_id, 
-                o.customer_region_id, 
-                o.address, 
-                o.created_on, 
-                o.last_updated_on,
-            
-                os.name AS status, 
-
-                oi.quantity,
-
-                p.id AS product_id, 
-                p.name AS product_name, 
-                p.description AS product_description, 
-                p.price_in_eur AS product_price_in_eur, 
-                p.created_on AS product_created_on, 
-                p.last_updated_on AS product_last_updated_on 
-
-            FROM {Orders} o
-            INNER JOIN {OrderStatuses} os
-                ON o.status_id = os.id
-            LEFT JOIN {OrderItems} oi 
-                ON o.id = oi.order_id
-            LEFT JOIN {Products} p 
-                ON oi.product_id = p.id 
-
-            {whereCondition}
-        ";
-    }
-
     private string _where = string.Empty;
 
     private SelectOrdersWithItemsSpecification() { }
@@ -82,6 +44,44 @@ public sealed record SelectOrdersWithItemsSpecification
     ) => (await db.QueryAsync<OrderWithItemDb>(AsQuery()))
             .GroupBy((OrderWithItemDb owi) => owi.Id)
             .Select(MapToOrderResponse);
+
+    private string AsQuery()
+    {
+        string whereCondition = string.IsNullOrWhiteSpace(_where) ?
+            string.Empty :
+            $"WHERE {_where}";
+
+        return $@"
+            SELECT 
+                o.id AS Id, 
+                o.customer_id AS CustomerId, 
+                o.customer_region_id AS CustomerRegionId, 
+                o.address AS Address, 
+                o.created_on AS CreatedOn, 
+                o.last_updated_on AS LastUpdatedOn, 
+                
+                os.name AS Status, 
+                
+                oi.quantity AS Quantity, 
+                
+                p.id AS ProductId , 
+                p.name AS ProductName, 
+                p.description AS ProductDescription, 
+                p.price_in_eur AS ProductPriceInEur, 
+                p.created_on AS ProductCreatedOn, 
+                p.last_updated_on AS ProductLastUpdatedOn 
+
+            FROM {Orders} o
+            INNER JOIN {OrderStatuses} os
+                ON o.status_id = os.id
+            LEFT JOIN {OrderItems} oi 
+                ON o.id = oi.order_id
+            LEFT JOIN {Products} p 
+                ON oi.product_id = p.id 
+
+            {whereCondition}
+        ";
+    }
 
     private static OrderResponse MapToOrderResponse(IGrouping<long, OrderWithItemDb> orderItems)
     {

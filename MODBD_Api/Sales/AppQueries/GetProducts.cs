@@ -57,11 +57,10 @@ public sealed class GetProductsQueryHandler : IRequestHandler<GetProductsQuery, 
     public async ValueTask<AppResponse<IEnumerable<ProductResponse>>> Handle(GetProductsQuery request, CancellationToken cancellationToken)
     {
         using IDbConnection db = _getDbConnection(request.Tenant);
-        string sql = @$"
-            {SelectProducts.FromTenant(request.Tenant)}
-        ";
 
-        IEnumerable<ProductResponse> Products = await db.QueryAsync<ProductResponse>(sql);
-        return AppResponse<IEnumerable<ProductResponse>>.Succeeded(Products);
+        IEnumerable<ProductResponse> products = await SelectProductsSpecification
+            .FromTenant(request.Tenant)
+            .QueryAsync(db);
+        return AppResponse<IEnumerable<ProductResponse>>.Succeeded(products);
     }
 }

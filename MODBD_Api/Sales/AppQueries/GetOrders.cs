@@ -1,5 +1,4 @@
-﻿using Dapper;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using MODBD_Api.Common;
 using MODBD_Api.Common.Contracts;
 using MODBD_Api.Common.Persistence;
