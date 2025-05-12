@@ -1,5 +1,6 @@
 ﻿using Dapper;
 using MODBD_Api.Common;
+using MODBD_Api.Common.Contracts;
 using System.Data;
 
 namespace MODBD_Api.Sales;
@@ -16,10 +17,11 @@ public sealed class SelectProductsSpecification
     public static SelectProductsSpecification FromTenant(Tenant tenant) => new() { Tenant = tenant };
 
     public async Task<IEnumerable<ProductResponse>> QueryAsync(
-        IDbConnection db
-    ) => (await db.QueryAsync<ProductResponse>(AsQuery()));
+        IDbConnection db,
+        RowOffset rowOffset, RowCount rowCount
+    ) => (await db.QueryAsync<ProductResponse>(AsQuery(rowOffset, rowCount)));
 
-    private string AsQuery()
+    private string AsQuery(RowOffset rowOffset, RowCount rowCount)
     {
         return $@"
             Select 
@@ -29,7 +31,10 @@ public sealed class SelectProductsSpecification
                 p.price_in_eur AS PriceInEur, 
                 p.created_on AS CreatedOn, 
                 p.last_updated_on AS LastUpdatedOn
-            From {Products} p
+            From {Products} p 
+            Order By p.created_on Desc
+            Offset {rowOffset.Value} Rows
+            Fetch Next {rowCount.Value} Rows Only
         ";
     }
 }

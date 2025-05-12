@@ -30,22 +30,29 @@ public sealed class GetProductsController : ControllerBase
     /// <returns></returns>
     [HttpGet(ApiRoutes.Sales.GetProducts, Name = "get-Products")]
     [Tags(ApiRoutes.Sales.Tag)]
-    public async Task<IActionResult> GetProducts([FromRoute] int? tenantId, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> GetProducts([FromRoute] int? tenantId, GetProductsRequest request, CancellationToken cancellationToken = default)
     {
-        GetProductsQuery query = GetProductsQuery.From(tenantId);
+        GetProductsQuery query = GetProductsQuery.From(tenantId, request);
         AppResponse<IEnumerable<ProductResponse>> response = await _handler.Handle(query, cancellationToken);
         return this.From(response);
     }
 }
 
 
+public sealed record GetProductsRequest : PaginatedRequest;
+
+
 public sealed record GetProductsQuery : IRequest<IEnumerable<ProductResponse>>
 {
     public required Tenant Tenant { get; init; }
+    public required RowOffset RowOffset { get; init; }
+    public required RowCount RowCount { get; init; }
 
-    public static GetProductsQuery From(int? tenantId) => new()
+    public static GetProductsQuery From(int? tenantId, GetProductsRequest request) => new()
     {
         Tenant = Tenant.FromIdOrThrowIfNull(tenantId),
+        RowOffset = RowOffset.FromNullableValue(request.RowOffset),
+        RowCount = RowCount.FromNullableValue(request.RowCount),
     };
     private GetProductsQuery() { }
 }
@@ -63,7 +70,7 @@ public sealed class GetProductsQueryHandler : IRequestHandler<GetProductsQuery, 
 
         IEnumerable<ProductResponse> products = await SelectProductsSpecification
             .FromTenant(request.Tenant)
-            .QueryAsync(db);
+            .QueryAsync(db, request.RowOffset, request.RowCount);
         return AppResponse<IEnumerable<ProductResponse>>.Succeeded(products);
     }
 }

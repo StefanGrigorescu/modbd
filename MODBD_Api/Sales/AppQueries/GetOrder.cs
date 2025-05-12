@@ -32,24 +32,31 @@ public sealed class GetOrderController : ControllerBase
     /// <returns></returns>
     [HttpGet(ApiRoutes.Sales.GetOrder, Name = "get-order")]
     [Tags(ApiRoutes.Sales.Tag)]
-    public async Task<IActionResult> GetOrder([FromRoute] int? tenantId, [FromRoute] long id, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> GetOrder([FromRoute] int? tenantId, [FromRoute] long id, [FromQuery] GetOrderRequest request, CancellationToken cancellationToken = default)
     {
-        GetOrderQuery query = GetOrderQuery.From(tenantId, id);
+        GetOrderQuery query = GetOrderQuery.From(tenantId, id, request);
         AppResponse<OrderResponse> response = await _handler.Handle(query, cancellationToken);
         return this.From(response);
     }
 }
 
 
+public sealed record GetOrderRequest : PaginatedRequest;
+
+
 public sealed record GetOrderQuery : IRequest<OrderResponse>
 {
     public required Tenant Tenant { get; init; }
     public required OrderId OrderId { get; init; }
+    public required RowOffset RowOffset { get; init; }
+    public required RowCount RowCount { get; init; }
 
-    public static GetOrderQuery From(int? tenantId, long orderId) => new()
+    public static GetOrderQuery From(int? tenantId, long orderId, GetOrderRequest request) => new()
     {
         Tenant = Tenant.FromIdOrThrowIfNull(tenantId),
         OrderId = OrderId.FromValue(orderId),
+        RowOffset = RowOffset.FromNullableValue(request.RowOffset),
+        RowCount = RowCount.FromNullableValue(request.RowCount),
     };
     private GetOrderQuery() { }
 }
@@ -71,7 +78,7 @@ public sealed class GetOrderQueryHandler : IRequestHandler<GetOrderQuery, OrderR
         OrderResponse? order = (await SelectOrdersWithItemsSpecification
             .FromTenant(request.Tenant)
             .Where("id = :id")
-            .QueryAsync(db, parameters))
+            .QueryAsync(db, request.RowOffset, request.RowCount, parameters))
             .FirstOrDefault();
 
         return order is null ? 

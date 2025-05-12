@@ -32,24 +32,31 @@ public sealed class GetMyOrdersController : ControllerBase
     /// <returns></returns>
     [HttpGet(ApiRoutes.Sales.GetMyOrders, Name = "get-my-orders")]
     [Tags(ApiRoutes.Sales.Tag)]
-    public async Task<IActionResult> GetMyOrders([FromRoute] int? tenantId, [FromRoute] long customerId, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> GetMyOrders([FromRoute] int? tenantId, [FromRoute] long customerId, [FromQuery] GetMyOrdersRequest request, CancellationToken cancellationToken = default)
     {
-        GetMyOrdersQuery query = GetMyOrdersQuery.From(tenantId: tenantId , customerId: customerId);
+        GetMyOrdersQuery query = GetMyOrdersQuery.From(tenantId: tenantId , customerId: customerId, request: request);
         AppResponse<IEnumerable<OrderResponse>> response = await _handler.Handle(query, cancellationToken);
         return this.From(response);
     }
 }
 
 
+public sealed record GetMyOrdersRequest : PaginatedRequest;
+
+
 public sealed record GetMyOrdersQuery : IRequest<IEnumerable<OrderResponse>>
 {
     public required Tenant Tenant { get; init; }
     public required CustomerId CustomerId { get; init; }
+    public required RowOffset RowOffset { get; init; }
+    public required RowCount RowCount { get; init; }
 
-    public static GetMyOrdersQuery From(int? tenantId, long customerId) => new()
+    public static GetMyOrdersQuery From(int? tenantId, long customerId, GetMyOrdersRequest request) => new()
     {
         Tenant = Tenant.FromIdOrThrowIfNull(tenantId),
         CustomerId = CustomerId.FromValue(customerId),
+        RowOffset = RowOffset.FromNullableValue(request.RowOffset),
+        RowCount = RowCount.FromNullableValue(request.RowCount),
     };
     private GetMyOrdersQuery() { }
 }
@@ -71,7 +78,7 @@ public sealed class GetMyOrdersQueryHandler : IRequestHandler<GetMyOrdersQuery, 
         IEnumerable<OrderResponse> orders = await SelectOrdersWithItemsSpecification
             .FromTenant(request.Tenant)
             .Where("customer_id = :customerId")
-            .QueryAsync(db, parameters);
+            .QueryAsync(db, request.RowOffset, request.RowCount,  parameters);
 
         return AppResponse<IEnumerable<OrderResponse>>.Succeeded(orders);
     }

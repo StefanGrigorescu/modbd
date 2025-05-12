@@ -1,5 +1,6 @@
 using Dapper;
 using MODBD_Api.Common;
+using MODBD_Api.Common.Contracts;
 using MODBD_Common.Abstractions.Responses;
 using MODBD_Common.Collections;
 using System.Data;
@@ -34,31 +35,47 @@ public sealed record SelectOrdersWithItemsSpecification
 
     public async Task<IEnumerable<OrderResponse>> QueryAsync(
         IDbConnection db,
+        RowOffset rowOffset, RowCount rowCount,
         DynamicParameters parameters
-    ) => (await db.QueryAsync<OrderWithItemDb>(AsQuery(), parameters))
+    ) => (await db.QueryAsync<OrderWithItemDb>(AsQuery(rowOffset, rowCount), parameters))
             .GroupBy((OrderWithItemDb owi) => owi.Id)
             .Select(MapToOrderResponse);
 
     public async Task<IEnumerable<OrderResponse>> QueryAsync(
-        IDbConnection db
-    ) => (await db.QueryAsync<OrderWithItemDb>(AsQuery()))
+        IDbConnection db,
+        RowOffset rowOffset, RowCount rowCount
+    ) => (await db.QueryAsync<OrderWithItemDb>(AsQuery(rowOffset, rowCount)))
             .GroupBy((OrderWithItemDb owi) => owi.Id)
             .Select(MapToOrderResponse);
 
-    private string AsQuery()
+    private string AsQuery(RowOffset rowOffset, RowCount rowCount)
     {
         string whereCondition = string.IsNullOrWhiteSpace(_where) ?
             string.Empty :
             $"WHERE {_where}";
 
         return $@"
+            WITH PaginatedOrders AS (
+                SELECT 
+                    o.id AS Id, 
+                    o.customer_id AS CustomerId, 
+                    o.customer_region_id AS CustomerRegionId, 
+                    o.address AS Address, 
+                    o.created_on AS CreatedOn, 
+                    o.last_updated_on AS LastUpdatedOn, 
+                    o.status_id AS StatusId
+                FROM {Orders} o
+                {whereCondition}
+                ORDER BY o.created_on DESC
+                OFFSET {rowOffset.Value} ROWS FETCH NEXT {rowCount.Value} ROWS ONLY
+            )
             SELECT 
-                o.id AS Id, 
-                o.customer_id AS CustomerId, 
-                o.customer_region_id AS CustomerRegionId, 
-                o.address AS Address, 
-                o.created_on AS CreatedOn, 
-                o.last_updated_on AS LastUpdatedOn, 
+                po.Id, 
+                po.CustomerId, 
+                po.CustomerRegionId, 
+                po.Address, 
+                po.CreatedOn, 
+                po.LastUpdatedOn, 
                 
                 os.name AS Status, 
                 
@@ -71,15 +88,13 @@ public sealed record SelectOrdersWithItemsSpecification
                 p.created_on AS ProductCreatedOn, 
                 p.last_updated_on AS ProductLastUpdatedOn 
 
-            FROM {Orders} o
+            FROM PaginatedOrders po
             INNER JOIN {OrderStatuses} os
-                ON o.status_id = os.id
+                ON po.StatusId = os.id
             LEFT JOIN {OrderItems} oi 
-                ON o.id = oi.order_id
+                ON po.Id = oi.order_id
             LEFT JOIN {Products} p 
                 ON oi.product_id = p.id 
-
-            {whereCondition}
         ";
     }
 
