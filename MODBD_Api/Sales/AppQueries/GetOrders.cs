@@ -29,7 +29,7 @@ public sealed class GetOrdersController : ControllerBase
     /// <returns></returns>
     [HttpGet(ApiRoutes.Sales.GetOrders, Name = "get-orders")]
     [Tags(ApiRoutes.Sales.Tag)]
-    public async Task<IActionResult> GetOrders([FromRoute] int tenantId, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> GetOrders([FromRoute] int? tenantId, CancellationToken cancellationToken = default)
     {
         GetOrdersQuery query = GetOrdersQuery.From(tenantId);
         AppResponse<IEnumerable<OrderResponse>> response = await _handler.Handle(query, cancellationToken);
@@ -42,7 +42,10 @@ public sealed record GetOrdersQuery : IRequest<IEnumerable<OrderResponse>>
 {
     public required Tenant Tenant { get; init; }
 
-    public static GetOrdersQuery From(int tenantId) => new() { Tenant = Tenant.FromId(tenantId), };
+    public static GetOrdersQuery From(int? tenantId) => new()
+    {
+        Tenant = Tenant.FromIdOrThrowIfNull(tenantId),
+    };
     private GetOrdersQuery() { }
 }
 

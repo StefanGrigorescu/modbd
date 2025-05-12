@@ -32,7 +32,7 @@ public sealed class GetMyOrdersController : ControllerBase
     /// <returns></returns>
     [HttpGet(ApiRoutes.Sales.GetMyOrders, Name = "get-my-orders")]
     [Tags(ApiRoutes.Sales.Tag)]
-    public async Task<IActionResult> GetMyOrders([FromRoute] int tenantId, [FromRoute] int customerId, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> GetMyOrders([FromRoute] int? tenantId, [FromRoute] long customerId, CancellationToken cancellationToken = default)
     {
         GetMyOrdersQuery query = GetMyOrdersQuery.From(tenantId: tenantId , customerId: customerId);
         AppResponse<IEnumerable<OrderResponse>> response = await _handler.Handle(query, cancellationToken);
@@ -44,12 +44,12 @@ public sealed class GetMyOrdersController : ControllerBase
 public sealed record GetMyOrdersQuery : IRequest<IEnumerable<OrderResponse>>
 {
     public required Tenant Tenant { get; init; }
-    public required long CustomerId { get; init; }
+    public required CustomerId CustomerId { get; init; }
 
-    public static GetMyOrdersQuery From(int tenantId, long customerId) => new()
+    public static GetMyOrdersQuery From(int? tenantId, long customerId) => new()
     {
-        Tenant = Tenant.FromId(tenantId),
-        CustomerId = customerId,
+        Tenant = Tenant.FromIdOrThrowIfNull(tenantId),
+        CustomerId = CustomerId.FromValue(customerId),
     };
     private GetMyOrdersQuery() { }
 }
@@ -65,8 +65,8 @@ public sealed class GetMyOrdersQueryHandler : IRequestHandler<GetMyOrdersQuery, 
     {
         using IDbConnection db = _getDbConnection(request.Tenant);
 
-        DynamicParameters parameters = new();
-        parameters.Add(":customerId", request.CustomerId);
+        DynamicParameters parameters = new DynamicParameters()
+            .WithParameter(":customerId", request.CustomerId);
 
         IEnumerable<OrderResponse> orders = await SelectOrdersWithItemsSpecification
             .FromTenant(request.Tenant)

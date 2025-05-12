@@ -10,7 +10,7 @@ public static class ApiRoutes
 
         public const string Tag = "Insights";
 
-        public const string GetDynamic = _insightsRoute + "/dynamic";
+        public const string GetDynamic = _insightsRoute + "/{tenantId}/dynamic";
     }
 
     
@@ -61,8 +61,8 @@ public static class ApiRoutes
 
         public const string Tag = "Billing";
 
-        public const string GetInvoices = _billingRoute + "/invoices";
-        public const string GetInvoice = _billingRoute + "/invoices/{id}";
-        public const string GetMyInvoices = _billingRoute + "{customerId}/my-invoices";
+        public const string GetInvoices = _billingRoute + "/{tenantId}/invoices";
+        public const string GetInvoice = _billingRoute + "/{tenantId}/invoices/{id}";
+        public const string GetMyInvoices = _billingRoute + "/{tenantId}/{customerId}/my-invoices";
     }
 }

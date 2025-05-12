@@ -33,7 +33,7 @@ public sealed class PlaceOrderController : ControllerBase
     /// <returns></returns>
     [HttpPost(ApiRoutes.Sales.PlaceOrder, Name = "place-order")]
     [Tags(ApiRoutes.Sales.Tag)]
-    public async Task<IActionResult> PlaceOrder([FromRoute] int tenantId, [FromBody] PlaceOrderRequest request, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> PlaceOrder([FromRoute] int? tenantId, [FromBody] PlaceOrderRequest request, CancellationToken cancellationToken = default)
     {
         PlaceOrderCommand command = PlaceOrderCommand.From(request, tenantId);
         AppResponse<PlaceOrderResponse> response = await _handler.Handle(command, cancellationToken);
@@ -44,7 +44,7 @@ public sealed class PlaceOrderController : ControllerBase
 
 public sealed record PlaceOrderRequest
 {
-    public required int CustomerId { get; init; }
+    public required long CustomerId { get; init; }
     public required string Address { get; init; }
     /// <summary>
     /// {item_id1}x{quantity1},{item_id2xquantity2} <br></br> 
@@ -65,17 +65,17 @@ public sealed record PlaceOrderResponse
 
 public sealed record PlaceOrderCommand : IRequest<PlaceOrderResponse>
 {
-    public required int CustomerId { get; init; }
+    public required Tenant Tenant { get; init; }
+    public required CustomerId CustomerId { get; init; }
     public required string Address { get; init; }
     public required string ItemsCsv { get; init; }
-    public required Tenant Tenant { get; init; }
 
-    public static PlaceOrderCommand From(PlaceOrderRequest request, int tenantId) => new()
+    public static PlaceOrderCommand From(PlaceOrderRequest request, int? tenantId) => new()
     {
-        CustomerId = request.CustomerId,
+        Tenant = Tenant.FromIdOrThrowIfNull(tenantId),
+        CustomerId = CustomerId.FromValue(request.CustomerId),
         Address = request.Address,
         ItemsCsv = request.ItemsCsv,
-        Tenant = Tenant.FromId(tenantId),
     };
     private PlaceOrderCommand() { }
 }
@@ -105,13 +105,13 @@ public sealed class PlaceOrderCommandHandler : IRequestHandler<PlaceOrderCommand
 
         long orderId = SnowflakeId.New(request.Tenant, _random, _utcSnapshot);
 
-        DynamicParameters parameters = new();
-        parameters.Add("p_order_id", orderId, DbType.Int64, ParameterDirection.Input);
-        parameters.Add("p_customer_id", request.CustomerId, DbType.Int32, ParameterDirection.Input);
-        parameters.Add("p_address", request.Address, DbType.String, ParameterDirection.Input);
-        parameters.Add("p_items_csv", request.ItemsCsv, DbType.String, ParameterDirection.Input);
-        parameters.Add("is_success", dbType: DbType.Int32, direction: ParameterDirection.Output);
-        parameters.Add("p_created_on", DateTime.UtcNow, DbType.DateTime, ParameterDirection.Input);
+        DynamicParameters parameters = new DynamicParameters()
+            .WithParameter("p_order_id", orderId, DbType.Int64, ParameterDirection.Input)
+            .WithParameter("p_customer_id", request.CustomerId, DbType.Int32, ParameterDirection.Input)
+            .WithParameter("p_address", request.Address, DbType.String, ParameterDirection.Input)
+            .WithParameter("p_items_csv", request.ItemsCsv, DbType.String, ParameterDirection.Input)
+            .WithParameter("is_success", dbType: DbType.Int32, direction: ParameterDirection.Output)
+            .WithParameter("p_created_on", DateTime.UtcNow, DbType.DateTime, ParameterDirection.Input);
 
         await db.ExecuteAsync(procedureName, parameters, commandType: CommandType.StoredProcedure);
 

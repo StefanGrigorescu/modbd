@@ -32,7 +32,7 @@ public sealed class GetOrderController : ControllerBase
     /// <returns></returns>
     [HttpGet(ApiRoutes.Sales.GetOrder, Name = "get-order")]
     [Tags(ApiRoutes.Sales.Tag)]
-    public async Task<IActionResult> GetOrder([FromRoute] int tenantId, [FromRoute] long id, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> GetOrder([FromRoute] int? tenantId, [FromRoute] long id, CancellationToken cancellationToken = default)
     {
         GetOrderQuery query = GetOrderQuery.From(tenantId, id);
         AppResponse<OrderResponse> response = await _handler.Handle(query, cancellationToken);
@@ -46,9 +46,9 @@ public sealed record GetOrderQuery : IRequest<OrderResponse>
     public required Tenant Tenant { get; init; }
     public required OrderId OrderId { get; init; }
 
-    public static GetOrderQuery From(int tenantId, long orderId) => new()
+    public static GetOrderQuery From(int? tenantId, long orderId) => new()
     {
-        Tenant = Tenant.FromId(tenantId),
+        Tenant = Tenant.FromIdOrThrowIfNull(tenantId),
         OrderId = OrderId.FromValue(orderId),
     };
     private GetOrderQuery() { }
@@ -65,8 +65,8 @@ public sealed class GetOrderQueryHandler : IRequestHandler<GetOrderQuery, OrderR
     {
         using IDbConnection db = _getDbConnection(request.Tenant);
 
-        DynamicParameters parameters = new();
-        parameters.Add(":id", request.OrderId);
+        DynamicParameters parameters = new DynamicParameters()
+            .WithParameter(":id", request.OrderId);
 
         OrderResponse? order = (await SelectOrdersWithItemsSpecification
             .FromTenant(request.Tenant)

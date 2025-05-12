@@ -91,6 +91,7 @@ public sealed record SelectOrdersWithItemsSpecification
         return new()
         {
             Id = id,
+            Tenant = Tenant.FromRegionId(order.CustomerRegionId),
             CustomerId = order.CustomerId,
             CustomerRegionId = order.CustomerRegionId,
             Address = order.Address,

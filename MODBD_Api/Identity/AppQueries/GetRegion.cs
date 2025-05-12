@@ -68,8 +68,8 @@ public sealed class GetRegionQueryHandler : IRequestHandler<GetRegionQuery, GetR
                     FROM IDNT_REGIONS 
                     WHERE id = :id";
 
-            DynamicParameters parameters = new ();
-            parameters.Add(":id", request.Id); 
+            DynamicParameters parameters = new DynamicParameters()
+                .WithParameter(":id", request.Id); 
             
             GetRegionResponse? region = await dbConnection.QueryFirstOrDefaultAsync<GetRegionResponse>(sql, parameters);
 

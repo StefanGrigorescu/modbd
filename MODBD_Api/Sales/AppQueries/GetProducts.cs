@@ -30,7 +30,7 @@ public sealed class GetProductsController : ControllerBase
     /// <returns></returns>
     [HttpGet(ApiRoutes.Sales.GetProducts, Name = "get-Products")]
     [Tags(ApiRoutes.Sales.Tag)]
-    public async Task<IActionResult> GetProducts([FromRoute] int tenantId, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> GetProducts([FromRoute] int? tenantId, CancellationToken cancellationToken = default)
     {
         GetProductsQuery query = GetProductsQuery.From(tenantId);
         AppResponse<IEnumerable<ProductResponse>> response = await _handler.Handle(query, cancellationToken);
@@ -43,7 +43,10 @@ public sealed record GetProductsQuery : IRequest<IEnumerable<ProductResponse>>
 {
     public required Tenant Tenant { get; init; }
 
-    public static GetProductsQuery From(int tenantId) => new() { Tenant = Tenant.FromId(tenantId), };
+    public static GetProductsQuery From(int? tenantId) => new()
+    {
+        Tenant = Tenant.FromIdOrThrowIfNull(tenantId),
+    };
     private GetProductsQuery() { }
 }
 

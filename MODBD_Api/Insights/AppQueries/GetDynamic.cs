@@ -31,7 +31,7 @@ public sealed class GetDynamicController : ControllerBase
     /// <returns></returns>
     [HttpGet(ApiRoutes.Insights.GetDynamic, Name = "get-dynamic")]
     [Tags(ApiRoutes.Insights.Tag)]
-    public async Task<IActionResult> GetDynamic([FromRoute] int tenantId, [FromQuery] string sql, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> GetDynamic([FromRoute] int? tenantId, [FromQuery] string sql, CancellationToken cancellationToken = default)
     {
         GetDynamicQuery query = GetDynamicQuery.From(tenantId, sql);
         AppResponse<IEnumerable<object>> response = await _handler.Handle(query, cancellationToken);
@@ -45,7 +45,11 @@ public sealed record GetDynamicQuery : IRequest<IEnumerable<object>>
     public required Tenant Tenant { get; init; }
     public required TextBoxLg Sql { get; init; }
 
-    public static GetDynamicQuery From(int tenantId, string sql) => new() { Tenant = Tenant.FromId(tenantId), Sql = TextBoxLg.From(sql), };
+    public static GetDynamicQuery From(int? tenantId, string sql) => new() 
+    { 
+        Tenant = Tenant.FromIdOrThrowIfNull(tenantId), 
+        Sql = TextBoxLg.From(sql), 
+    };
     private GetDynamicQuery() { }
 }
 

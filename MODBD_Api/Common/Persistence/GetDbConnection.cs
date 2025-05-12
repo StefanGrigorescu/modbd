@@ -15,8 +15,8 @@ public class GetDbConnectionImpl
 
     public IDbConnection Invoke(Tenant tenant) =>
         _tenantConnectionString.TryGetValue(tenant, out string? connectionString) ?
-        new OracleConnection(connectionString) :
-        throw new ArgumentException($"Tenant {tenant} not found in connection string dictionary.", nameof(tenant));
+            new OracleConnection(connectionString) :
+            throw new ArgumentException($"Tenant {tenant} not found in connection string dictionary.", nameof(tenant));
 }
 
 
