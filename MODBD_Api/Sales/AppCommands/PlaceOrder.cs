@@ -107,7 +107,7 @@ public sealed class PlaceOrderCommandHandler : IRequestHandler<PlaceOrderCommand
 
         DynamicParameters parameters = new DynamicParameters()
             .WithParameter("p_order_id", orderId, DbType.Int64, ParameterDirection.Input)
-            .WithParameter("p_customer_id", request.CustomerId, DbType.Int32, ParameterDirection.Input)
+            .WithParameter("p_customer_id", request.CustomerId, DbType.Int64, ParameterDirection.Input)
             .WithParameter("p_address", request.Address, DbType.String, ParameterDirection.Input)
             .WithParameter("p_items_csv", request.ItemsCsv, DbType.String, ParameterDirection.Input)
             .WithParameter("is_success", dbType: DbType.Int32, direction: ParameterDirection.Output)

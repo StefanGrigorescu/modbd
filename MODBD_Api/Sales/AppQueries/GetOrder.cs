@@ -73,7 +73,7 @@ public sealed class GetOrderQueryHandler : IRequestHandler<GetOrderQuery, OrderR
         using IDbConnection db = _getDbConnection(request.Tenant);
 
         DynamicParameters parameters = new DynamicParameters()
-            .WithParameter(":id", request.OrderId);
+            .WithParameter(":id", request.OrderId, dbType: DbType.Int64);
 
         OrderResponse? order = (await SelectOrdersWithItemsSpecification
             .FromTenant(request.Tenant)

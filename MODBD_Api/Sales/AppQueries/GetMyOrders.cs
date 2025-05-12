@@ -73,7 +73,7 @@ public sealed class GetMyOrdersQueryHandler : IRequestHandler<GetMyOrdersQuery, 
         using IDbConnection db = _getDbConnection(request.Tenant);
 
         DynamicParameters parameters = new DynamicParameters()
-            .WithParameter(":customerId", request.CustomerId);
+            .WithParameter(":customerId", request.CustomerId, dbType: DbType.Int64);
 
         IEnumerable<OrderResponse> orders = await SelectOrdersWithItemsSpecification
             .FromTenant(request.Tenant)
